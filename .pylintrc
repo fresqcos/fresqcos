@@ -1,0 +1,30 @@
+[MASTER]
+ignore=docs,examples
+jobs=0
+extension-pkg-whitelist=
+load-plugins=
+
+[MESSAGES CONTROL]
+disable=
+    C0114,  ; missing-module-docstring
+    C0115,  ; missing-class-docstring
+    C0116,  ; missing-function-docstring
+    R0902,  ; too-many-instance-attributes
+    R0903,  ; too-few-public-methods
+    R0913,  ; too-many-arguments
+    R0914,  ; too-many-locals
+    R0915,  ; too-many-statements
+    W0511  ; TODO/FIXME comments
+
+[TYPECHECK]
+ignored-modules=scipy.special
+
+[FORMAT]
+max-line-length=100
+
+[BASIC]
+good-names=i,j,k,x,y,z,_,T,dt
+
+[REPORTS]
+output-format=colorized
+score=yes
