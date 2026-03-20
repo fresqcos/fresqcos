@@ -1,21 +1,25 @@
 [build-system]
-requires = ["setuptools>=64", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "fresqcos"
 version = "0.1.0"
 description = "Free-space quantum communication software"
 readme = "README.md"
-requires-python = ">=3.10"
 authors = [
   { name = "Ilektra Karakosta-Amarantidou", email = "ilektra.karakosta@icfo.eu" },
 ]
 license = { file = "LICENSE" }
 
 dependencies = [
-  # "numpy",
-  # "scipy",
+  "numpy",
+  "scipy",
+  "pandas",
+  "matplotlib",
+  "astropy",
+  "poliastro",
+  "sgp4"
 ]
 
 [project.optional-dependencies]

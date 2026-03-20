@@ -1,4 +1,3 @@
-
 """Module for wind speed profiles."""
 
 import numpy as np

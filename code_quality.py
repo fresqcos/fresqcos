@@ -17,7 +17,6 @@ from __future__ import annotations
 import subprocess
 from typing import List, Tuple
 
-
 Command = Tuple[str, List[str]]
 
 
@@ -36,7 +35,7 @@ def main() -> int:
     commands: List[Command] = [
         (
             "pylint",
-            ["pylint", "fresqcos"],
+            ["pylint", "src/fresqcos"],
         ),
         (
             "mypy",
@@ -46,7 +45,7 @@ def main() -> int:
             "docstr-coverage",
             [
                 "docstr-coverage",
-                "fresqcos",
+                "src/fresqcos",
                 "--exclude",
                 "--skip-private",
                 "--skip-magic",
