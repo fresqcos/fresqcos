@@ -1,4 +1,4 @@
-"""Module for useful probability distributions"""
+"""Module for useful probability distributions."""
 
 import numpy as np
 from scipy.special import erf
@@ -7,15 +7,18 @@ from scipy.special import erf
 def lognormal_pdf(eta, mu, sigma):
     """Compute lognormal distribution probability density function (PDF).
 
-    ## Parameters
-    `eta` : np.ndarray
+    Parameters
+    ----------
+    eta : np.ndarray
         Input random variable values to calculate PDF for.
-    `mu` : float
+    mu : float
         Mean value of lognormal distribution.
-    `sigma` : float
+    sigma : float
         Standard deviation of lognormal distribution.
-    ## Returns
-    `pdf` : np.ndarray
+
+    Returns
+    -------
+    pdf : np.ndarray
         PDF of lognormal distribution for values of eta.
     """
 
@@ -26,15 +29,18 @@ def lognormal_pdf(eta, mu, sigma):
 def lognormal_cdf(eta, mu, sigma):
     """Compute lognormal distribution cumulative density function (CDF).
 
-    ## Parameters
-    `eta` : np.ndarray
+    Parameters
+    ----------
+    eta : np.ndarray
         Input random variable values to calculate CDF for.
-    `mu` : float
+    mu : float
         Mean value of lognormal distribution.
-    `sigma` : float
+    sigma : float
         Standard deviation of lognormal distribution.
-    ## Returns
-    `cdf` : np.ndarray
+
+    Returns
+    -------
+    cdf : np.ndarray
         CDF of lognormal distribution for values of eta.
     """
     cdf = (1 + erf((np.log(eta) + mu) / (sigma * np.sqrt(2)))) / 2
@@ -45,15 +51,18 @@ def truncated_lognormal_pdf(eta, mu, sigma):
     """Compute truncated lognormal distribution probability density function
     (PDF) according to [Vasylyev et al., 2018].
 
-    ## Parameters
-    `eta` : np.ndarray
+    Parameters
+    ----------
+    eta : np.ndarray
         Input random variable values to calculate PDF for.
-    `mu` : float
+    mu : float
         Mean value of truncated lognormal distribution.
-    `sigma` : float
+    sigma : float
         Standard deviation of truncated lognormal distribution.
-    ## Returns
-    `pdf` : np.ndarray
+
+    Returns
+    -------
+    pdf : np.ndarray
         PDF of truncated lognormal distribution for values of eta.
     """
     lognormal_cdf_dif = lognormal_cdf(1, mu, sigma)
@@ -70,22 +79,25 @@ def truncated_lognormal_pdf(eta, mu, sigma):
 
 
 def lognegative_weibull_pdf(eta, eta_0, wandering_variance, r, l):
-    """Compute log-negative Weiibull distribution probability density
+    """Compute log-negative Weibull distribution probability density
     function (PDF) according to [Vasylyev et al., 2018].
 
-    ## Parameters
-    `eta` : np.ndarray
+    Parameters
+    ----------
+    eta : np.ndarray
         Input random variable values to calculate PDF for.
-    `eta_0` : float
+    eta_0 : float
         Maximal transmittance of the Gaussian beam.
-    `wandering_variance` : float
+    wandering_variance : float
         Wandering variance of the Gaussian beam.
-    `r` : float
+    r : float
         Scale parameter of distribution.
-    `l` : float
+    l : float
         Shape parameter of distribution.
-    ## Returns
-    `pdf` : np.ndarray
+
+    Returns
+    -------
+    pdf : np.ndarray
         PDF of log-negative Weibull distribution for values of eta.
     """
     if np.size(eta) == 1:

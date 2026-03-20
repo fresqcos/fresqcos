@@ -29,6 +29,8 @@ dev = [
   "mypy",
   "docstr-coverage",
   "pre-commit",
+  "sphinx",
+  "sphinx-rtd-theme"
 ]
 
 [tool.black]
