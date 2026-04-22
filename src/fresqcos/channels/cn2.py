@@ -8,7 +8,7 @@ FloatArray = NDArray[np.float64]
 
 def hufnagel_valley(altitude: FloatArray, wind_speed_rms: FloatArray, reference_ground: float):
     """
-    Computes the refractive index structure constant (Cn2) profile 
+    Computes the refractive index structure constant (Cn2) profile
     based on the Hufnagel-Valley model.
 
     Parameters
