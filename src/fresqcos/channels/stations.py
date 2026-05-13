@@ -1,4 +1,4 @@
-"Module defining classes for stations or platforms in a free-space optical communication system"
+"""Module defining classes for stations or platforms in a free-space optical communication system"""
 
 from abc import ABC, abstractmethod
 from transmitters import Transmitter
@@ -98,33 +98,34 @@ class TransmitterStation(Station, Transmitter):
             raise ValueError(f"transmitter must be an instance of Transmitter, got {type(value)}")
         self._transmitter = value
 
-    class ReceiverStation(Station, Receiver):
-        """Class representing a station hosting a receiver in a free-space optical communication system.
 
-        Parameters
-        ----------
-        name : str
-            The name of the station.
-        latitude : float
-            The latitude of the station.
-        longitude : float
-            The longitude of the station.
-        altitude : float
-            The altitude of the station.
-        receiver : Receiver
-            The receiver hosted by the station.
-        """
+class ReceiverStation(Station, Receiver):
+    """Class representing a station hosting a receiver in a free-space optical communication system.
 
-        def __init__(self, name, latitude, longitude, altitude, receiver):
-            super().__init__(name, latitude, longitude, altitude)
-            self.receiver = receiver
+    Parameters
+    ----------
+    name : str
+        The name of the station.
+    latitude : float
+        The latitude of the station.
+    longitude : float
+        The longitude of the station.
+    altitude : float
+        The altitude of the station.
+    receiver : Receiver
+        The receiver hosted by the station.
+    """
 
-        @property
-        def receiver(self):
-            return self._receiver
+    def __init__(self, name, latitude, longitude, altitude, receiver):
+        super().__init__(name, latitude, longitude, altitude)
+        self.receiver = receiver
 
-        @receiver.setter
-        def receiver(self, value):
-            if not isinstance(value, Receiver):
-                raise ValueError(f"receiver must be an instance of Receiver, got {type(value)}")
-            self._receiver = value
+    @property
+    def receiver(self):
+        return self._receiver
+
+    @receiver.setter
+    def receiver(self, value):
+        if not isinstance(value, Receiver):
+            raise ValueError(f"receiver must be an instance of Receiver, got {type(value)}")
+        self._receiver = value

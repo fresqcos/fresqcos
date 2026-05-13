@@ -1,11 +1,13 @@
+"""Module for geometric calculations related to the channel between a ground station and an aerial platform."""
+
 import numpy as np
 import math
 
 EARTH_RADIUS_KM = 6371
 
 
-def channel_length_from_zenith_angle(ground_station_alt, aerial_platform_alt, zenith_angle):
-    """Compute channel length that corresponds to a particular ground station altitude, aerial
+def slant_range_from_zenith_angle(ground_station_alt, aerial_platform_alt, zenith_angle):
+    """Compute slant range that corresponds to a particular ground station altitude, aerial
     platform altitude and zenith angle.
 
     Parameters
@@ -19,17 +21,17 @@ def channel_length_from_zenith_angle(ground_station_alt, aerial_platform_alt, ze
 
     Returns
     -------
-    length : float
-        Length of the channel [km].
+    channel_length : float
+        Slant range of the channel [km].
     """
     zenith_angle = np.deg2rad(zenith_angle)
     aerial_platform_eff_alt = EARTH_RADIUS_KM + aerial_platform_alt
-    ground_station_eff_elt = EARTH_RADIUS_KM + ground_station_alt
-    length = np.sqrt(
-        aerial_platform_eff_alt**2 + ground_station_eff_elt**2 * (np.cos(zenith_angle) ** 2 - 1)
-    ) - ground_station_eff_elt * np.cos(zenith_angle)
+    ground_station_eff_alt = EARTH_RADIUS_KM + ground_station_alt
+    channel_length = np.sqrt(
+        aerial_platform_eff_alt**2 + ground_station_eff_alt**2 * (np.cos(zenith_angle) ** 2 - 1)
+    ) - ground_station_eff_alt * np.cos(zenith_angle)
 
-    return length
+    return channel_length
 
 
 def height_min_horiz(length, height):
@@ -72,7 +74,7 @@ def sec(theta):
 
 
 def central_angle(latitude_1, longitude_1, latitude_2, longitude_2):
-    """Compute central angle between two points on the Earth surface given their latitudes and longitudes.
+    """Compute central angle between two points on the Earth's surface given their latitudes and longitudes.
 
     Parameters
     ----------
@@ -100,8 +102,8 @@ def central_angle(latitude_1, longitude_1, latitude_2, longitude_2):
     return np.rad2deg(angle)
 
 
-def channel_length_from_central_angle(ground_station_alt, aerial_platform_alt, central_angle):
-    """Compute channel length that corresponds to a particular ground station altitude, aerial
+def slant_range_from_central_angle(ground_station_alt, aerial_platform_alt, central_angle):
+    """Compute slant range that corresponds to a particular ground station altitude, aerial
     platform altitude and central angle.
 
     Parameters
@@ -112,28 +114,73 @@ def channel_length_from_central_angle(ground_station_alt, aerial_platform_alt, c
         Altitude of the aerial platform [km].
     central_angle : float
         Central angle between the ground station and the aerial platform [degrees].
+
     Returns
     -------
-    length : float
-        Length of the channel [km].
+    channel_length : float
+        Slant range of the channel [km].
     """
-    ground_station_eff_elt = EARTH_RADIUS_KM + ground_station_alt
+    ground_station_eff_alt = EARTH_RADIUS_KM + ground_station_alt
     aerial_platform_eff_alt = EARTH_RADIUS_KM + aerial_platform_alt
     channel_length = np.sqrt(
-        ground_station_eff_elt**2
+        ground_station_eff_alt**2
         + aerial_platform_eff_alt**2
-        - 2 * ground_station_eff_elt * aerial_platform_eff_alt * np.cos(np.deg2rad(central_angle))
+        - 2 * ground_station_eff_alt * aerial_platform_eff_alt * np.cos(np.deg2rad(central_angle))
     )
     return channel_length
 
 
-def zenith_angle(channel_length, ground_station_alt, aerial_platform_alt):
+def slant_range_from_coordinates(
+    ground_station_lat,
+    ground_station_lon,
+    ground_station_alt,
+    aerial_platform_lat,
+    aerial_platform_lon,
+    aerial_platform_alt,
+):
+    """Compute slant range between a ground station and an aerial platform given their coordinates.
+    Parameters
+    ----------
+    ground_station_lat : float
+        Latitude of the ground station [degrees].
+    ground_station_lon : float
+        Longitude of the ground station [degrees].
+    ground_station_alt : float
+        Altitude of the ground station [km].
+    aerial_platform_lat : float
+        Latitude of the aerial platform [degrees].
+    aerial_platform_lon : float
+        Longitude of the aerial platform [degrees].
+    aerial_platform_alt : float
+        Altitude of the aerial platform [km].
+
+    Returns
+    -------
+    channel_length : float
+        Slant range of the channel [km].
+    """
+    central_angle = central_angle(
+        ground_station_lat, ground_station_lon, aerial_platform_lat, aerial_platform_lon
+    )
+
+    ground_station_eff_alt = EARTH_RADIUS_KM + ground_station_alt
+    aerial_platform_eff_alt = EARTH_RADIUS_KM + aerial_platform_alt
+
+    channel_length = math.sqrt(
+        ground_station_eff_alt**2
+        + aerial_platform_eff_alt**2
+        - 2 * ground_station_eff_alt * aerial_platform_eff_alt * np.cos(np.deg2rad(central_angle))
+    )
+    return channel_length
+
+
+def zenith_angle(slant_range, ground_station_alt, aerial_platform_alt):
     """Compute zenith angle of the channel between a ground station and an aerial platform.
 
     Parameters
     ----------
-    channel_length : float
-        Length of the channel [km].
+    slant_range : float
+        Slant range of the channel [km].
     ground_station_alt : float
         Altitude of the ground station [km].
     aerial_platform_alt : float
@@ -145,42 +192,44 @@ def zenith_angle(channel_length, ground_station_alt, aerial_platform_alt):
         Zenith angle of the channel [degrees].
     """
     aerial_platform_eff_alt = EARTH_RADIUS_KM + aerial_platform_alt
-    ground_station_eff_elt = EARTH_RADIUS_KM + ground_station_alt
+    ground_station_eff_alt = EARTH_RADIUS_KM + ground_station_alt
     zenith_angle = np.arccos(
-        (aerial_platform_eff_alt**2 - ground_station_eff_elt**2 - channel_length**2)
-        / (2 * channel_length * ground_station_eff_elt)
+        (aerial_platform_eff_alt**2 - ground_station_eff_alt**2 - slant_range**2)
+        / (2 * slant_range * ground_station_eff_alt)
     )
     return np.rad2deg(zenith_angle)
 
 
-def ground_station_azimuth(lat_gs, lon_gs, lat_aerial, lon_aerial):
+def ground_station_azimuth(
+    ground_station_lat, ground_station_lon, aerial_platform_lat, aerial_platform_lon
+):
     """Compute azimuth of a ground station pointing at an aerial platform.
 
     Parameters
     ----------
-    lat_gs : float
+    ground_station_lat : float
         Latitude of the ground station [degrees].
-    lon_gs : float
+    ground_station_lon : float
         Longitude of the ground station [degrees].
-    lat_aerial : float
+    aerial_platform_lat : float
         Latitude of the aerial platform [degrees].
-    lon_aerial : float
+    aerial_platform_lon : float
         Longitude of the aerial platform [degrees].
 
     Returns
     -------
-    az : float
+    azimuth : float
         Azimuth of the channel [degrees].
     """
-    phi_gs = math.radians(lat_gs)
-    phi_sat = math.radians(lat_aerial)
-    d_lam = math.radians(lon_aerial - lon_gs)
+    phi_gs = math.radians(ground_station_lat)
+    phi_sat = math.radians(aerial_platform_lat)
+    d_lam = math.radians(aerial_platform_lon - ground_station_lon)
 
     numerator = math.sin(d_lam) * math.cos(phi_sat)
     denominator = math.cos(phi_gs) * math.sin(phi_sat) - math.sin(phi_gs) * math.cos(
         phi_sat
     ) * math.cos(d_lam)
 
-    az = math.degrees(math.atan2(numerator, denominator))
-    az_normalized = az % 360
-    return az_normalized
+    azimuth = math.degrees(math.atan2(numerator, denominator))
+    azimuth_normalized = azimuth % 360
+    return azimuth_normalized
