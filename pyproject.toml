@@ -25,6 +25,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "black",
+  "docformatter",
   "pylint",
   "mypy",
   "docstr-coverage",
@@ -34,7 +35,7 @@ dev = [
 ]
 
 [tool.black]
-line-length = 100
+line-length = 88
 target-version = ["py313"]
 include = '\.pyi?$'
 exclude = '''
@@ -50,3 +51,10 @@ exclude = '''
   | examples
 )/
 '''
+
+[tool.docformatter]
+black = true                
+recursive = true            
+in-place = true             
+wrap-summaries = 88        
+wrap-descriptions = 88    

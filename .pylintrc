@@ -20,7 +20,7 @@ disable=
 ignored-modules=scipy.special
 
 [FORMAT]
-max-line-length=100
+max-line-length=88
 
 [BASIC]
 good-names=i,j,k,x,y,z,_,T,dt

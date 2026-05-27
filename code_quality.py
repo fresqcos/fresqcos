@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""
-Run code-quality checks for the project.
+"""Run code-quality checks for the project.
 
 This script wraps:
 - pylint          (style / linting)
