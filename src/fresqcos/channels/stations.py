@@ -1,18 +1,18 @@
 """Module defining classes for stations or platforms in a free-space optical
-communication system.
-"""
+communication system."""
 
 from abc import ABC
-from fresqcos.transmitters import Transmitter
-from fresqcos.receivers import Receiver
+from fresqcos.telescopes import Transmitter
+from fresqcos.telescopes import Receiver
 
 
 class Station(ABC):
     """Abstract base class representing a station/platform in a free-space optical
-    communication system.
-    """
+    communication system."""
 
-    def __init__(self, name: str, latitude: float, longitude: float, altitude: float) -> None:
+    def __init__(
+        self, name: str, latitude: float, longitude: float, altitude: float
+    ) -> None:
         """Initialize the station with the given parameters.
 
         Parameters
@@ -90,8 +90,7 @@ class Station(ABC):
 
 class TransmitterStation(Station, Transmitter):
     """Class representing a station hosting a transmitter in a free-space optical
-    communication system.
-    """
+    communication system."""
 
     def __init__(
         self,
@@ -130,17 +129,23 @@ class TransmitterStation(Station, Transmitter):
     @transmitter.setter
     def transmitter(self, value: Transmitter) -> None:
         if not isinstance(value, Transmitter):
-            raise ValueError(f"transmitter must be an instance of Transmitter, got {type(value)}")
+            raise ValueError(
+                f"transmitter must be an instance of Transmitter, got {type(value)}"
+            )
         self._transmitter = value
 
 
 class ReceiverStation(Station, Receiver):
     """Class representing a station hosting a receiver in a free-space optical
-    communication system.
-    """
+    communication system."""
 
     def __init__(
-        self, name: str, latitude: float, longitude: float, altitude: float, receiver: Receiver
+        self,
+        name: str,
+        latitude: float,
+        longitude: float,
+        altitude: float,
+        receiver: Receiver,
     ) -> None:
         """Initialize the receiver station with the given parameters.
 
@@ -171,5 +176,7 @@ class ReceiverStation(Station, Receiver):
     @receiver.setter
     def receiver(self, value: Receiver) -> None:
         if not isinstance(value, Receiver):
-            raise ValueError(f"receiver must be an instance of Receiver, got {type(value)}")
+            raise ValueError(
+                f"receiver must be an instance of Receiver, got {type(value)}"
+            )
         self._receiver = value

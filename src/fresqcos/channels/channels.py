@@ -33,8 +33,7 @@ class FiberChannel(Channel):
 
     @property
     def distance_km(self) -> float:
-        """Return the length of the fiber channel in km. Must be positive.
-        """
+        """Return the length of the fiber channel in km. Must be positive."""
         return self._distance_km
 
     @distance_km.setter
@@ -45,8 +44,7 @@ class FiberChannel(Channel):
 
     @property
     def loss_per_km(self) -> float:
-        """Return the attenuation coefficient of the fiber channel in dB/km. Must be positive.
-        """
+        """Return the attenuation coefficient of the fiber channel in dB/km. Must be positive."""
         return self._loss_per_km
 
     @loss_per_km.setter
@@ -86,8 +84,7 @@ class FreeSpaceChannel(Channel):
 
     @property
     def transmitter_station(self) -> TransmitterStation:
-        """Return the transmitter station. Must be an instance of TransmitterStation.
-        """
+        """Return the transmitter station. Must be an instance of TransmitterStation."""
         return self._transmitter_station
 
     @transmitter_station.setter
@@ -100,8 +97,7 @@ class FreeSpaceChannel(Channel):
 
     @property
     def receiver_station(self) -> ReceiverStation:
-        """Return the receiver station. Must be an instance of ReceiverStation.
-        """
+        """Return the receiver station. Must be an instance of ReceiverStation."""
         return self._receiver_station
 
     @receiver_station.setter
@@ -114,8 +110,7 @@ class FreeSpaceChannel(Channel):
 
     @property
     def atmospheric_channel(self) -> Atmosphere:
-        """Return the atmospheric channel. Must be an instance of Atmosphere.
-"""
+        """Return the atmospheric channel. Must be an instance of Atmosphere."""
         return self._atmospheric_channel
 
     @atmospheric_channel.setter

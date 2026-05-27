@@ -1,6 +1,5 @@
 """Module for geometric calculations related to the channel between a ground station and
-an aerial platform.
-"""
+an aerial platform."""
 
 import math
 import numpy as np

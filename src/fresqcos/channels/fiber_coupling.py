@@ -361,27 +361,34 @@ def compute_attenuation_factors(
         Attenuation factors.
     """
     n_corrected = n[n <= n_max]
-    open_loop_tf = (
-        lambda v: integral_gain
-        * np.exp(-control_delay * v)
-        * (1 - np.exp(-integration_time * v))
-        / (integration_time * v) ** 2
-    )
-    e_error = lambda v: 1 / (1 + open_loop_tf(v))
     gamma_j = np.ones_like(n, dtype=float)
     cutoff_freq = 0.3 * (n_corrected + 1) * wind_speed / rx_aperture
+
+    def open_loop_tf(v):
+        """Open loop transfer function of the AO system."""
+        return (
+            integral_gain
+            * np.exp(-control_delay * v)
+            * (1 - np.exp(-integration_time * v))
+            / (integration_time * v) ** 2
+        )
+
+    def e_error(v):
+        """Error function of the AO system."""
+        return 1 / (1 + open_loop_tf(v))
+
+    def psd_turbulence(v):
+        """Power spectral density of the turbulence."""
+        if v <= cutoff_freq:
+            if n_corrected[index] == 1:
+                return v ** (-2 / 3)
+            return v ** (0)
+        return v ** (-17 / 3)
+
     for index in range(0, np.size(n_corrected)):
-        if n_corrected[index] == 1:
-            PSD_turbulence = lambda v: (
-                v ** (-2 / 3) if v <= cutoff_freq[index] else v ** (-17 / 3)
-            )
-        else:
-            PSD_turbulence = lambda v: (
-                v ** (0) if v <= cutoff_freq[index] else v ** (-17 / 3)
-            )
         gamma_j[index] = (
-            quad(lambda v: e_error(v) ** 2 * PSD_turbulence(v), 1e-2, np.inf)[0]
-            / quad(PSD_turbulence, 1e-2, np.inf)[0]
+            quad(lambda v: e_error(v) ** 2 * psd_turbulence(v), 1e-2, np.inf)[0]
+            / quad(psd_turbulence, 1e-2, np.inf)[0]
         )
 
     return gamma_j

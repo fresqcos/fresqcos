@@ -1,6 +1,5 @@
 """Module for modeling atmospheric effects on free-space optical communication
-channels.
-"""
+channels."""
 
 from abc import ABC
 import numpy as np
@@ -12,8 +11,7 @@ FloatArray = NDArray[np.float64]
 
 class Atmosphere(ABC):
     """Abstract base class representing the atmospheric effects on a free-space optical
-    communication channel.
-    """
+    communication channel."""
 
     def __init__(
         self, cn2_profile: FloatArray, wind_speed: float, visibility: float
@@ -23,7 +21,7 @@ class Atmosphere(ABC):
         Parameters
         ----------
         cn2_profile : FloatArray
-            The refractive index structure constant profile as a function of altitude, which quantifies the strength of atmospheric turbulence.
+            The refractive index structure constant profile as a function of altitude.
         wind_speed : float
             The wind speed in m/s, which can affect the beam propagation.
         visibility : float
@@ -64,7 +62,6 @@ class Atmosphere(ABC):
 
 class SatToGroundAtmosphere(Atmosphere):
     """Class representing the atmospheric effects on a satellite-to-ground free-space
-    optical communication channel.
-    """
+    optical communication channel."""
 
     pass
