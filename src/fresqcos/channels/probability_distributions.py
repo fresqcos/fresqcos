@@ -21,8 +21,9 @@ def lognormal_pdf(eta, mu, sigma):
     pdf : np.ndarray
         PDF of lognormal distribution for values of eta.
     """
-
-    pdf = np.exp(-((np.log(eta) + mu) ** 2) / (2 * sigma**2)) / (eta * sigma * np.sqrt(2 * np.pi))
+    pdf = np.exp(-((np.log(eta) + mu) ** 2) / (2 * sigma**2)) / (
+        eta * sigma * np.sqrt(2 * np.pi)
+    )
     return pdf
 
 
@@ -48,8 +49,8 @@ def lognormal_cdf(eta, mu, sigma):
 
 
 def truncated_lognormal_pdf(eta, mu, sigma):
-    """Compute truncated lognormal distribution probability density function
-    (PDF) according to [Vasylyev et al., 2018].
+    """Compute truncated lognormal distribution probability density function (PDF)
+    according to [Vasylyev et al., 2018].
 
     Parameters
     ----------
@@ -79,8 +80,8 @@ def truncated_lognormal_pdf(eta, mu, sigma):
 
 
 def lognegative_weibull_pdf(eta, eta_0, wandering_variance, r, l):
-    """Compute log-negative Weibull distribution probability density
-    function (PDF) according to [Vasylyev et al., 2018].
+    """Compute log-negative Weibull distribution probability density function (PDF)
+    according to [Vasylyev et al., 2018].
 
     Parameters
     ----------
@@ -107,7 +108,10 @@ def lognegative_weibull_pdf(eta, eta_0, wandering_variance, r, l):
             pdf = (
                 (r**2 / (wandering_variance * eta * l))
                 * ((np.log(eta_0 / eta)) ** (2 / l - 1))
-                * np.exp(-(r**2 / (2 * wandering_variance)) * (np.log(eta_0 / eta)) ** (2 / l))
+                * np.exp(
+                    -(r**2 / (2 * wandering_variance))
+                    * (np.log(eta_0 / eta)) ** (2 / l)
+                )
             )
     else:
         pdf = np.zeros(np.size(eta))
@@ -116,7 +120,8 @@ def lognegative_weibull_pdf(eta, eta_0, wandering_variance, r, l):
             (r**2 / (wandering_variance * eta[eta_domain] * l))
             * ((np.log(eta_0 / eta[eta_domain])) ** (2 / l - 1))
             * np.exp(
-                -(r**2 / (2 * wandering_variance)) * (np.log(eta_0 / eta[eta_domain])) ** (2 / l)
+                -(r**2 / (2 * wandering_variance))
+                * (np.log(eta_0 / eta[eta_domain])) ** (2 / l)
             )
         )
     return pdf

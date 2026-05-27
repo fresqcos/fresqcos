@@ -1,10 +1,12 @@
-"""Module for calculating single-mode fiber coupling efficiency in free-space optical channels
-with atmospheric turbulence, based on the model presented in Scriminich et al. 2022.
+"""Module for calculating single-mode fiber coupling efficiency in free-space optical
+channels with atmospheric turbulence, based on the model presented in [Scriminich et al.
+
+2022].
 """
 
 import math
 import numpy as np
-from scipy.integrate import quad_vec
+from scipy.integrate import quad, quad_vec
 from scipy.special import gamma, hyp2f1
 from scipy.special import factorial as fac
 from numpy.typing import NDArray
@@ -14,8 +16,7 @@ FloatArray = NDArray[np.float64]
 
 
 def get_zernikes_index_range(n_max: int) -> list:
-    """
-    Returns a list of Zernike indexes.
+    """Returns a list of Zernike indexes.
 
     Parameters
     ----------
@@ -39,8 +40,8 @@ def get_zernikes_index_range(n_max: int) -> list:
 
 
 def calculate_j_noll(n: IntArray, m: IntArray) -> IntArray:
-    """
-    Calculates the Noll index j for given Zernike radial (n) and azimuthal (m) indexes.
+    """Calculates the Noll index j for given Zernike radial (n) and azimuthal (m)
+    indexes.
 
     Parameters
     ----------
@@ -68,20 +69,20 @@ def calculate_j_noll(n: IntArray, m: IntArray) -> IntArray:
 
 
 def eta_smf_max(alpha: float, beta: float) -> float:
-    """
-    Computes the smf coupling efficiency without turbulence, Eq. 19 Scriminich22.
+    """Computes the smf coupling efficiency without turbulence, Eq.
 
-    Parameters
-    ----------
-    alpha : float
-        Alpha parameter.
-    beta : float
-        Beta parameter.
+    19 Scriminich22.
+        Parameters
+        ----------
+        alpha : float
+            Alpha parameter.
+        beta : float
+            Beta parameter.
 
-    Returns
-    -------
-    float
-        Value of eta_0.
+        Returns
+        -------
+        float
+            Value of eta_0.
     """
     eta_0 = (
         2
@@ -95,33 +96,31 @@ def eta_smf_max(alpha: float, beta: float) -> float:
 
 
 def beta_param(rx_diameter: float, mfd: float, lmbd: float, f: float) -> float:
+    """Calculates beta parameter for the computation of eta_0, Eq.
+
+    20 Scriminich22.
+        Parameters
+        ----------
+        rx_diameter : float
+            Size of the receiver aperture at the lens before the fiber.
+        mfd : float
+            Mode field diameter of the fiber.
+        lmbd : float
+            Wavelength of the beam.
+        f : float
+            Focal length before the fiber.
+
+        Returns
+        -------
+        float
+            Value of beta.
     """
-    Calculates beta parameter for the computation of eta_0, Eq. 20 Scriminich22.
-
-    Parameters
-    ----------
-    rx_diameter : float
-        Size of the receiver aperture at the lens before the fiber.
-    mfd : float
-        Mode field diameter of the fiber.
-    lmbd : float
-        Wavelength of the beam.
-    f : float
-        Focal length before the fiber.
-
-    Returns
-    -------
-    float
-        Value of beta.
-    """
-
     beta = np.pi * rx_diameter * mfd / 4 / lmbd / f
     return beta
 
 
 def beta_opt(alpha: float) -> float:
-    """
-    Compute the optimal beta parameter given alpha.
+    """Compute the optimal beta parameter given alpha.
 
     Parameters
     ----------
@@ -133,7 +132,6 @@ def beta_opt(alpha: float) -> float:
     float
         Value of beta
     """
-
     return 1.22 * math.exp(-0.55 * alpha) - 0.1 * math.exp(-8 * alpha)
 
 
@@ -168,49 +166,47 @@ def geom_factor(n: int | IntArray, beta: float = 11 / 3) -> FloatArray:
 
 
 def bn2_zernike(rx_diameter: float, r_0: float, n: int | IntArray) -> FloatArray:
+    """Compute the Zernike coefficient of order n, Eq.
+
+    22 Scriminich22.
+        Parameters
+        ----------
+        rx_diameter : float
+            Size of the receiver aperture.
+        r_0 : float
+            Value of fried parameter.
+        n : int or IntArray
+            Zernike radial index.
+
+        Returns
+        -------
+        FloatArray
+            Value(s) of bn2.
     """
-    Compute the Zernike coefficient of order n, Eq. 22 Scriminich22.
-
-    Parameters
-    ----------
-    rx_diameter : float
-        Size of the receiver aperture.
-    r_0 : float
-        Value of fried parameter.
-    n : int or IntArray
-        Zernike radial index.
-
-    Returns
-    -------
-    FloatArray
-        Value(s) of bn2.
-    """
-
     zernikes = (rx_diameter / r_0) ** (5 / 3) * geom_factor(n)
     return FloatArray(zernikes)
 
 
 def bn2(rx_diameter: float, r_0: float, n: int | IntArray, obs: float) -> FloatArray:
+    """Compute the annular coefficient of order n [Dai and Mahajan 2007, eq.
+
+    39].
+        Parameters
+        ----------
+        rx_diameter : float
+            Size of the receiver aperture.
+        r_0 : float
+            Value of fried parameter.
+        n : int or IntArray
+            Zernike radial index.
+        obs : float
+            Obstruction ratio of receiver aperture.
+
+        Returns
+        -------
+        FloatArray
+            Value(s) of bn2.
     """
-    Compute the annular coefficient of order n [Dai and Mahajan 2007, eq. 39].
-
-    Parameters
-    ----------
-    rx_diameter : float
-        Size of the receiver aperture.
-    r_0 : float
-        Value of fried parameter.
-    n : int or IntArray
-        Zernike radial index.
-    obs : float
-        Obstruction ratio of receiver aperture.
-
-    Returns
-    -------
-    FloatArray
-        Value(s) of bn2.
-    """
-
     n = np.asarray(n)
     pi = np.pi
     constant_term = 0.023 * (pi ** (8 / 3)) / (2 ** (5 / 3) * gamma(17 / 6))
@@ -232,27 +228,25 @@ def bn2(rx_diameter: float, r_0: float, n: int | IntArray, obs: float) -> FloatA
 
 
 def eta_ao(bj2: list) -> float:
+    """Compute the smf coupling efficiency with turbulence, Eq.
+
+    24 Scriminich22.
+        Parameters
+        ----------
+        bj2 : list
+            List of Zernike coefficients (without order 0).
+
+        Returns
+        -------
+        float
+            Value of eta_ao.
     """
-    Compute the smf coupling efficiency with turbulence, Eq. 24 Scriminich22.
-
-    Parameters
-    ----------
-    bj2 : list
-        List of Zernike coefficients (without order 0).
-
-    Returns
-    -------
-    float
-        Value of eta_ao.
-    """
-
     eta = np.prod(1 / np.sqrt(1 + 2 * np.array(bj2)))
     return float(eta)
 
 
 def eta_s(scint_index: float) -> float:
-    """
-    Compute the impact of scintillation on the smf coupling efficiency.
+    """Compute the impact of scintillation on the smf coupling efficiency.
 
     Parameters
     ----------
@@ -271,29 +265,26 @@ def eta_s(scint_index: float) -> float:
 def compute_eta_xi_probability_distribution(
     xi: float | FloatArray, bj2: float | FloatArray
 ) -> FloatArray:
+    """Compute the probability distribution of xi, Eq.
+
+    33 Scriminich22
+        Parameters
+        ----------
+        xi : float or FloatArray
+            Input parameter for the probability distribution.
+        bj2 : float or FloatArray
+            Zernike coefficients squared (without order 0).
+
+        Returns
+        -------
+        float
+            Value(s) of p_xi(xi).
     """
-    Compute the probability distribution of xi, Eq. 33 Scriminich22
-
-    Parameters
-    ----------
-    xi : float or FloatArray
-        Input parameter for the probability distribution.
-    bj2 : float or FloatArray
-        Zernike coefficients squared (without order 0).
-
-    Returns
-    -------
-    float
-        Value(s) of p_xi(xi).
-    """
-
     xi = np.asarray(xi)
     bj2 = np.asarray(bj2)
 
     def integrand(x):
-        """
-        Integrand function for the probability distribution of xi.
-        """
+        """Integrand function for the probability distribution of xi."""
         expression = np.cos(np.sum((0.5 * np.arctan(2 * bj2 * x))) - xi * x) / (
             np.prod(1 + (4 * (x) ** 2 * bj2**2)) ** 0.25
         )
@@ -308,26 +299,89 @@ def compute_eta_xi_probability_distribution(
 def compute_eta_smf_probability_distribution(
     eta_smf: float | FloatArray, eta_max: float, bj2: float | FloatArray
 ) -> FloatArray:
+    """Compute the probability distribution of eta_smf, Eq.
+
+    34 Scriminich22.
+        Parameters
+        ----------
+        eta_smf : float or FloatArray
+            input parameter for the probability distribution.
+        eta_max : float
+            Maximum normalized coupled flux computed as eta_0*eta_S.
+        bj2 : float or FloatArray
+            Zernike coefficients squared (without order 0).
+
+        Returns
+        -------
+        float
+            Value(s) of p_smf(eta_smf).
     """
-    Compute the probability distribution of eta_smf, Eq. 34 Scriminich22.
+    eta_smf = np.asarray(eta_smf)
+    bj2 = np.asarray(bj2)
+    result = (
+        compute_eta_xi_probability_distribution(np.log(eta_max / eta_smf), bj2)
+        / eta_smf
+    )
+
+    return FloatArray(result)
+
+
+def compute_attenuation_factors(
+    n: IntArray,
+    n_max: int,
+    integral_gain: float,
+    control_delay: float,
+    integration_time: float,
+    wind_speed: float,
+    rx_aperture: float,
+) -> IntArray:
+    """Compute attenuation factors of turbulent phase mode variances up to maximum order
+    of AO correction n_max [Roddier, 1999].
 
     Parameters
     ----------
-    eta_smf : float or FloatArray
-        input parameter for the probability distribution.
-    eta_max : float
-        Maximum normalized coupled flux computed as eta_0*eta_S.
-    bj2 : float or FloatArray
-        Zernike coefficients squared (without order 0).
+    n : IntArray
+        Zernike radial indexes.
+    n_max : int
+        Maximum Zernike radial index of correction.
+    integral_gain : float
+        Integral gain of the AO system.
+    control_delay : float
+        Control delay of the AO system [s].
+    integration_time : float
+        Integration time of the AO system [s].
+    wind_speed : float
+        Wind speed of the turbulence [m/s].
+    rx_aperture : float
+        Diameter of the receiver aperture [m].
 
     Returns
     -------
-    float
-        Value(s) of p_smf(eta_smf).
+    gamma_j : IntArray
+        Attenuation factors.
     """
+    n_corrected = n[n <= n_max]
+    open_loop_tf = (
+        lambda v: integral_gain
+        * np.exp(-control_delay * v)
+        * (1 - np.exp(-integration_time * v))
+        / (integration_time * v) ** 2
+    )
+    e_error = lambda v: 1 / (1 + open_loop_tf(v))
+    gamma_j = np.ones_like(n, dtype=float)
+    cutoff_freq = 0.3 * (n_corrected + 1) * wind_speed / rx_aperture
+    for index in range(0, np.size(n_corrected)):
+        if n_corrected[index] == 1:
+            PSD_turbulence = lambda v: (
+                v ** (-2 / 3) if v <= cutoff_freq[index] else v ** (-17 / 3)
+            )
+        else:
+            PSD_turbulence = lambda v: (
+                v ** (0) if v <= cutoff_freq[index] else v ** (-17 / 3)
+            )
+        gamma_j[index] = (
+            quad(lambda v: e_error(v) ** 2 * PSD_turbulence(v), 1e-2, np.inf)[0]
+            / quad(PSD_turbulence, 1e-2, np.inf)[0]
+        )
 
-    eta_smf = np.asarray(eta_smf)
-    bj2 = np.asarray(bj2)
-    result = compute_eta_xi_probability_distribution(np.log(eta_max / eta_smf), bj2) / eta_smf
-
-    return FloatArray(result)
+    return gamma_j
