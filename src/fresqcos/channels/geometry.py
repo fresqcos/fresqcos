@@ -207,6 +207,43 @@ def zenith_angle_from_slant_range(
     return float(zenith_angle_deg)
 
 
+def zenith_angle_from_coordinates(
+    observer_lat: float,
+    observer_lon: float,
+    observer_alt: float,
+    target_lat: float,
+    target_lon: float,
+    target_alt: float,
+) -> float:
+    """Compute zenith angle at the observer from coordinates of observer and target.
+
+    Parameters
+    ----------
+    observer_lat : float
+        Latitude of the observer [degrees].
+    observer_lon : float
+        Longitude of the observer [degrees].
+    observer_alt : float
+        Altitude of the observer [km].
+    target_lat : float
+        Latitude of the target [degrees].
+    target_lon : float
+        Longitude of the target [degrees].
+    target_alt : float
+        Altitude of the target [km].
+
+    Returns
+    -------
+    zenith_angle : float
+        Zenith angle at the observer's location [degrees].
+    """
+    slant_range = slant_range_from_coordinates(
+        observer_lat, observer_lon, observer_alt, target_lat, target_lon, target_alt
+    )
+    zenith_angle = zenith_angle_from_slant_range(slant_range, observer_alt, target_alt)
+    return zenith_angle
+
+
 def compute_observer_azimuth(
     observer_lat: float, observer_lon: float, target_lat: float, target_lon: float
 ) -> float:

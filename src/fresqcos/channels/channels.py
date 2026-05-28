@@ -2,8 +2,14 @@
 
 from abc import ABC, abstractmethod
 from fresqcos.channels.stations import ReceiverStation, TransmitterStation
-from fresqcos.channels.geometry import slant_range_from_coordinates
+from fresqcos.channels.geometry import (
+    slant_range_from_coordinates,
+    zenith_angle_from_coordinates,
+    sec,
+)
 from fresqcos.channels.atmosphere import Atmosphere
+from scipy.integrate import quad
+import numpy as np
 
 
 class Channel(ABC):
@@ -143,92 +149,110 @@ class FreeSpaceChannel(Channel):
         pass
 
 
-# class DownlinkChannel(FreeSpaceChannel):
-#     """A downlink free-space optical communication channel."""
+class DownlinkChannel(FreeSpaceChannel):
+    """A downlink free-space optical communication channel."""
 
-#     def compute_channel_losses(self) -> float:
-#         pass
+    def __init__(
+        self,
+        transmitter_station: TransmitterStation,
+        receiver_station: ReceiverStation,
+        atmospheric_channel: Atmosphere,
+    ) -> None:
+        """Initialize the downlink channel with the given parameters.
+        Parameters
+        ----------
+        transmitter_station : TransmitterStation
+            The station hosting the transmitter.
+        receiver_station : ReceiverStation
+            The station hosting the receiver.
+        atmospheric_channel : Atmosphere
+            The atmospheric effects on the channel.
+        """
+        super().__init__(transmitter_station, receiver_station, atmospheric_channel)
 
-
-# class UplinkChannel(FreeSpaceChannel):
-#     """An uplink free-space optical communication channel."""
-
-#     def compute_channel_losses(self) -> float:
-#         pass
-
-
-# class HorizontalChannel(FreeSpaceChannel):
-#     """A horizontal free-space optical communication channel."""
-
-#     def compute_channel_losses(self) -> float:
-#         pass
-
-
-# class SatToAerialChannel(DownlinkChannel):
-#     """A satellite to aerial platform free-space optical communication channel."""
-
-#     def compute_channel_losses(self) -> float:
-#         pass
+    def compute_channel_losses(self) -> float:
+        pass
 
 
-# class AerialToSatChannel(UplinkChannel):
-#     """An aerial platform to satellite free-space optical communication channel."""
+class UplinkChannel(FreeSpaceChannel):
+    """An uplink free-space optical communication channel."""
 
-#     def compute_channel_losses(self) -> float:
-#         pass
-
-
-# class AerialToGroundChannel(DownlinkChannel):
-#     """An aerial platform to ground free-space optical communication channel."""
-
-#     def compute_channel_losses(self) -> float:
-#         pass
+    def compute_channel_losses(self) -> float:
+        pass
 
 
-# class GroundToAerialChannel(UplinkChannel):
-#     """A ground to aerial platform free-space optical communication channel."""
+class HorizontalChannel(FreeSpaceChannel):
+    """A horizontal free-space optical communication channel."""
 
-#     def compute_channel_losses(self) -> float:
-#         pass
-
-
-# class AerialToAerialChannel(HorizontalChannel):
-#     """An aerial platform to aerial platform free-space optical communication channel."""
-
-#     def compute_channel_losses(self) -> float:
-#         pass
+    def compute_channel_losses(self) -> float:
+        pass
 
 
-# class SatToSatChannel(HorizontalChannel):
-#     """A satellite to satellite free-space optical communication channel."""
+class SatToAerialChannel(DownlinkChannel):
+    """A satellite to aerial platform free-space optical communication channel."""
 
-#     def compute_channel_losses(self) -> float:
-#         pass
-
-
-# class SatToGroundChannel(DownlinkChannel):
-#     """A satellite to ground free-space optical communication channel."""
-
-#     def compute_channel_losses(self) -> float:
-#         pass
+    def compute_channel_losses(self) -> float:
+        pass
 
 
-# class GroundToSatChannel(UplinkChannel):
-#     """A ground to satellite free-space optical communication channel."""
+class AerialToSatChannel(UplinkChannel):
+    """An aerial platform to satellite free-space optical communication channel."""
 
-#     def compute_channel_losses(self) -> float:
-#         pass
-
-
-# class SatToGroundChannel(DownlinkChannel):
-#     """A satellite to ground free-space optical communication channel."""
-
-#     def compute_channel_losses(self) -> float:
-#         pass
+    def compute_channel_losses(self) -> float:
+        pass
 
 
-# class SatToSatChannel(HorizontalChannel):
-#     """A satellite to satellite free-space optical communication channel."""
+class AerialToGroundChannel(DownlinkChannel):
+    """An aerial platform to ground free-space optical communication channel."""
 
-#     def compute_channel_losses(self) -> float:
-#         pass
+    def compute_channel_losses(self) -> float:
+        pass
+
+
+class GroundToAerialChannel(UplinkChannel):
+    """A ground to aerial platform free-space optical communication channel."""
+
+    def compute_channel_losses(self) -> float:
+        pass
+
+
+class AerialToAerialChannel(HorizontalChannel):
+    """An aerial platform to aerial platform free-space optical communication channel."""
+
+    def compute_channel_losses(self) -> float:
+        pass
+
+
+class SatToSatChannel(HorizontalChannel):
+    """A satellite to satellite free-space optical communication channel."""
+
+    def compute_channel_losses(self) -> float:
+        pass
+
+
+class SatToGroundChannel(DownlinkChannel):
+    """A satellite to ground free-space optical communication channel."""
+
+    def compute_channel_losses(self) -> float:
+        pass
+
+
+class GroundToSatChannel(UplinkChannel):
+    """A ground to satellite free-space optical communication channel."""
+
+    def compute_channel_losses(self) -> float:
+        pass
+
+
+class SatToGroundChannel(DownlinkChannel):
+    """A satellite to ground free-space optical communication channel."""
+
+    def compute_channel_losses(self) -> float:
+        pass
+
+
+class SatToSatChannel(HorizontalChannel):
+    """A satellite to satellite free-space optical communication channel."""
+
+    def compute_channel_losses(self) -> float:
+        pass
