@@ -5,7 +5,7 @@ from fresqcos.channels.stations import ReceiverStation, TransmitterStation
 from fresqcos.channels.geometry import (
     slant_range_from_coordinates,
     zenith_angle_from_coordinates,
-    sec,
+    compute_sec,
 )
 from fresqcos.channels.atmosphere import Atmosphere
 from scipy.integrate import quad
@@ -170,7 +170,64 @@ class DownlinkChannel(FreeSpaceChannel):
         """
         super().__init__(transmitter_station, receiver_station, atmospheric_channel)
 
+    def _compute_rytov_variance_plane(self, zenith_angle: float) -> float:
+        """Compute rytov variance of a plane wave for a downlink channel [Andrews/Phillips, 2005, from Eqs 12.92 and 12.37].
+
+        Returns
+        -------
+        rytov_var : float
+            Rytov variance for plane wave propagating in the downlink channel.
+        """
+        receiver_alt = self.receiver_station.altitude * 1e3
+        transmitter_alt = self.transmitter_station.altitude * 1e3
+        k = 2 * np.pi / self.transmitter_station.transmitter.wavelength
+        scale = 1e14  # Scale factor to avoid numerical issues in integration
+        integrand = (
+            lambda h: self.atmospheric_channel.cn2_profile(h)
+            * scale
+            * (h - receiver_alt) ** (5 / 6)
+        )
+        rytov_var = (
+            2.25
+            * k ** (7 / 6)
+            * compute_sec(zenith_angle) ** (11 / 6)
+            * quad(integrand, receiver_alt, transmitter_alt)[0]
+            / scale
+        )
+        return rytov_var
+
+    def _compute_rytov_variance_spherical(self, zenith_angle: float) -> float:
+        """Compute rytov variance of a spherical wave for a downlink channel [Andrews/Phillips, 2005, from Eqs 12.92 and 12.37].
+
+        Returns
+        -------
+        rytov_var :float
+            Rytov variance for spherical wave propagating in the downlink channel.
+        """
+        receiver_alt = self.receiver_station.altitude * 1e3
+        transmitter_alt = self.transmitter_station.altitude * 1e3
+        k = 2 * np.pi / self.transmitter_station.transmitter.wavelength
+        scale = 1e14  # Scale factor to avoid numerical issues in integration
+        integrand = (
+            lambda h: self.atmospheric_channel.cn2_profile(h)
+            * scale
+            * (h - receiver_alt) ** (5 / 6)
+            * ((transmitter_alt - h) / (transmitter_alt - receiver_alt)) ** (5 / 6)
+        )
+        rytov_var = (
+            2.25
+            * k ** (7 / 6)
+            * compute_sec(zenith_angle) ** (11 / 6)
+            * quad(integrand, receiver_alt, transmitter_alt)[0]
+            / scale
+        )
+        return rytov_var
+
     def compute_channel_losses(self) -> float:
+        pass
+
+    def draw_channel_pdf_sample(self) -> float:
+        """Draw a random sample from the channel loss distribution."""
         pass
 
 
