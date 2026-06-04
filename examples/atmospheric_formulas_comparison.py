@@ -27,7 +27,8 @@ if __name__ == "__main__":
     zenith_angle = 80
     wind_rms = 10
     reference_cn2 = 1.7e-14
-    altitude_vector = np.linspace(gs_altitude, platform_altitude, 2000)
+    altitude_vector = np.linspace(gs_altitude, platform_altitude, 1000)
+    
     
     tx_telescope = Transmitter(
         wavelength=wvln,
@@ -44,6 +45,14 @@ if __name__ == "__main__":
         internal_loss=rx_internal_loss,
     )
 
+    tx_station = TransmitterStation(
+        name="Satellite",
+        latitude=0,
+        longitude=0,
+        altitude=0,
+        transmitter=tx_telescope,
+    )
+
     rx_station = ReceiverStation(
         name="Ground Station",
         latitude=0,
@@ -52,30 +61,24 @@ if __name__ == "__main__":
         receiver=rx_telescope,
     )
 
+    atmosphere = Atmosphere(
+        cn2_profile=partial(hufnagel_valley, wind_speed_rms=wind_rms, reference_ground=reference_cn2),
+        wind_speed=wind_rms,
+        visibility=10,
+    )
+
+    down_channel = DownlinkChannel(
+        transmitter_station=tx_station,
+        receiver_station=rx_station,
+        atmospheric_channel=atmosphere,
+    )
+
     rytov_var_plane_list = []
     rytov_var_spherical_list = []
 
     for i in range(len(altitude_vector)):
 
-        tx_station = TransmitterStation(
-            name="Satellite",
-            latitude=0,
-            longitude=0,
-            altitude=altitude_vector[i],
-            transmitter=tx_telescope,
-        )
-
-        atmosphere = Atmosphere(
-            cn2_profile=partial(hufnagel_valley, wind_speed_rms=wind_rms, reference_ground=reference_cn2),
-            wind_speed=wind_rms,
-            visibility=10,
-        )
-
-        down_channel = DownlinkChannel(
-            transmitter_station=tx_station,
-            receiver_station=rx_station,
-            atmospheric_channel=atmosphere,
-        )
+        down_channel.transmitter_station.altitude = altitude_vector[i]
 
         rytov_var_plane = down_channel._compute_rytov_variance_plane(zenith_angle)
         rytov_var_spherical = down_channel._compute_rytov_variance_spherical(zenith_angle)
@@ -84,7 +87,7 @@ if __name__ == "__main__":
 
 cn2_computed = hufnagel_valley(altitude_vector*1e3, wind_speed_rms=wind_rms, reference_ground=reference_cn2)
 
-save_data = np.column_stack((altitude_vector, rytov_var_plane_list, rytov_var_spherical_list, cn2_computed))   
+# save_data = np.column_stack((altitude_vector, rytov_var_plane_list, rytov_var_spherical_list, cn2_computed))   
 
 plt.figure()
 plt.plot(altitude_vector, rytov_var_plane_list, label="Plane Wave")
