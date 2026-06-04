@@ -4,7 +4,7 @@ channels."""
 from abc import ABC
 import numpy as np
 from numpy.typing import NDArray
-from typing import Callable
+from typing import Callable, Union
 
 IntArray = NDArray[np.int_]
 FloatArray = NDArray[np.float64]
@@ -15,36 +15,58 @@ class Atmosphere(ABC):
     communication channel."""
 
     def __init__(
-        self, cn2_profile: Callable, wind_speed: float, visibility: float
+        self,
+        cn2_profile: Union[Callable, FloatArray],
+        wind_speed: float,
+        visibility: float,
+        cn2_altitudes: FloatArray | None = None,
     ) -> None:
         """Initialize the atmosphere with the given parameters.
 
         Parameters
         ----------
-        cn2_profile : Callable
+        cn2_profile : Union[Callable, FloatArray]
             The refractive index structure constant profile as a function of altitude.
+            If a FloatArray, cn2_altitudes must also be provided.
         wind_speed : float
             The wind speed in m/s, which can affect the beam propagation.
         visibility : float
             The visibility in kilometers, which affects the atmospheric attenuation.
+        cn2_altitudes : FloatArray | None
+            The altitudes in meters corresponding to the cn2_profile values if cn2_profile
+            is a FloatArray. Ignored if cn2_profile is callable.
         """
+        self.cn2_altitudes = cn2_altitudes
         self.cn2_profile = cn2_profile
         self.wind_speed = wind_speed
         self.visibility = visibility
 
     @property
     def cn2_profile(self) -> Callable:
-        """Return the refractive index structure constant profile as a function of
-        altitude."""
+        """Return the Cn2 profile as a callable function."""
         return self._cn2_profile
 
     @cn2_profile.setter
-    def cn2_profile(self, value: Callable) -> None:
-        if not callable(value):
+    def cn2_profile(self, value: Union[Callable, FloatArray]) -> None:
+        """Set the Cn2 profile. If value is a callable, it is used directly. If value is a
+        FloatArray, it is interpolated to create a callable function."""
+        if callable(value):
+            self._cn2_profile = value
+        elif isinstance(value, np.ndarray):
+            if self._cn2_altitudes is None:
+                raise ValueError(
+                    "cn2_altitudes must be provided when cn2_profile is a FloatArray."
+                )
+            if value.shape != self._cn2_altitudes.shape:
+                raise ValueError(
+                    f"cn2_profile and cn2_altitudes must have the same shape, "
+                    f"got {value.shape} and {self._cn2_altitudes.shape}."
+                )
+            self._cn2_profile = lambda h: np.interp(h, self._cn2_altitudes, value)
+        else:
             raise ValueError(
-                f"cn2_profile must be a callable function, got {type(value)}"
+                f"cn2_profile must be a callable or a numpy array, got {type(value)}."
             )
-        self._cn2_profile = value
 
     @property
     def wind_speed(self) -> float:
@@ -74,9 +96,16 @@ class Atmosphere(ABC):
             raise ValueError(f"visibility must be positive, got {value}")
         self._visibility = value
 
+    @property
+    def cn2_altitudes(self) -> FloatArray | None:
+        """Return the altitudes corresponding to the cn2_profile values if cn2_profile is a
+        FloatArray."""
+        return self._cn2_altitudes
 
-class SatToGroundAtmosphere(Atmosphere):
-    """Class representing the atmospheric effects on a satellite-to-ground free-space
-    optical communication channel."""
-
-    pass
+    @cn2_altitudes.setter
+    def cn2_altitudes(self, value: FloatArray | None) -> None:
+        if value is not None and not isinstance(value, np.ndarray):
+            raise ValueError(
+                f"cn2_altitudes must be a numpy array or None, got {type(value)}"
+            )
+        self._cn2_altitudes = value
