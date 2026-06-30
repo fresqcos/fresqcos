@@ -5,6 +5,7 @@ from abc import ABC
 import numpy as np
 from numpy.typing import NDArray
 from typing import Callable, Union
+from numbers import Real
 
 IntArray = NDArray[np.int_]
 FloatArray = NDArray[np.float64]
@@ -16,7 +17,7 @@ class Atmosphere(ABC):
 
     def __init__(
         self,
-        cn2_profile: Union[Callable, FloatArray],
+        cn2_profile: Union[Callable, FloatArray, float],
         wind_speed: float,
         visibility: float,
         cn2_altitudes: FloatArray | None = None,
@@ -25,7 +26,7 @@ class Atmosphere(ABC):
 
         Parameters
         ----------
-        cn2_profile : Union[Callable, FloatArray]
+        cn2_profile : Union[Callable, FloatArray, float]
             The refractive index structure constant profile as a function of altitude.
             If a FloatArray, cn2_altitudes must also be provided.
         wind_speed : float
@@ -34,7 +35,7 @@ class Atmosphere(ABC):
             The visibility in kilometers, which affects the atmospheric attenuation.
         cn2_altitudes : FloatArray | None
             The altitudes in meters corresponding to the cn2_profile values if cn2_profile
-            is a FloatArray. Ignored if cn2_profile is callable.
+            is a FloatArray. Ignored if cn2_profile is callable or scalar.
         """
         self.cn2_altitudes = cn2_altitudes
         self.cn2_profile = cn2_profile
@@ -47,25 +48,46 @@ class Atmosphere(ABC):
         return self._cn2_profile
 
     @cn2_profile.setter
-    def cn2_profile(self, value: Union[Callable, FloatArray]) -> None:
-        """Set the Cn2 profile. If value is a callable, it is used directly. If value is a
-        FloatArray, it is interpolated to create a callable function."""
+    def cn2_profile(self, value: Union[Callable, FloatArray, float]) -> None:
+        """Set the Cn2 profile.
+
+        If value is callable, it is used directly.
+        If value is a numpy array, it is interpolated.
+        If value is a single number, it is treated as a constant Cn2 profile.
+        """
         if callable(value):
             self._cn2_profile = value
+
+        elif isinstance(value, Real):
+            cn2_value = float(value)
+
+            if cn2_value < 0:
+                raise ValueError(f"cn2_profile must be non-negative, got {cn2_value}")
+
+            self._cn2_profile = lambda h: np.full_like(
+                np.asarray(h, dtype=float),
+                cn2_value,
+                dtype=float,
+            )
+
         elif isinstance(value, np.ndarray):
             if self._cn2_altitudes is None:
                 raise ValueError(
                     "cn2_altitudes must be provided when cn2_profile is a FloatArray."
                 )
+
             if value.shape != self._cn2_altitudes.shape:
                 raise ValueError(
                     f"cn2_profile and cn2_altitudes must have the same shape, "
                     f"got {value.shape} and {self._cn2_altitudes.shape}."
                 )
+
             self._cn2_profile = lambda h: np.interp(h, self._cn2_altitudes, value)
+
         else:
             raise ValueError(
-                f"cn2_profile must be a callable or a numpy array, got {type(value)}."
+                "cn2_profile must be a callable, numpy array, or scalar value, "
+                f"got {type(value)}."
             )
 
     @property
