@@ -2,7 +2,7 @@ from fresqcos.telescopes import Transmitter, Receiver
 from fresqcos.channels.stations import TransmitterStation, ReceiverStation
 from fresqcos.channels.atmosphere import Atmosphere
 from fresqcos.channels.cn2 import hufnagel_valley
-from fresqcos.channels.channels import DownlinkChannel
+from fresqcos.channels.channels import DownlinkChannel, FreeSpaceChannel
 from functools import partial
 import numpy as np
 import matplotlib.pyplot as plt
@@ -73,25 +73,36 @@ if __name__ == "__main__":
         atmospheric_channel=atmosphere,
     )
 
-    rytov_var_plane_list = []
+    free_space_channel = FreeSpaceChannel(
+        transmitter_station=tx_station,
+        receiver_station=rx_station,
+        atmospheric_channel=atmosphere,
+    )
+
     rytov_var_spherical_list = []
+    rytov_var_plane_parent_list = []
+    rytov_var_spherical_parent_list = []
 
     for i in range(len(altitude_vector)):
 
         down_channel.transmitter_station.altitude = altitude_vector[i]
+        free_space_channel.transmitter_station.altitude = altitude_vector[i]
 
-        rytov_var_plane = down_channel._compute_rytov_variance_plane(zenith_angle)
-        rytov_var_spherical = down_channel._compute_rytov_variance_spherical(zenith_angle)
-        rytov_var_plane_list.append(rytov_var_plane)
+        rytov_var_spherical = down_channel.compute_rytov_variance(zenith_angle)
+        rytov_var_plane_parent = free_space_channel.compute_rytov_variance(zenith_angle, link_type="downlink", wave_type="plane")
+        rytov_var_spherical_parent = free_space_channel.compute_rytov_variance(zenith_angle, link_type="downlink", wave_type="spherical")
         rytov_var_spherical_list.append(rytov_var_spherical)
+        rytov_var_plane_parent_list.append(rytov_var_plane_parent)
+        rytov_var_spherical_parent_list.append(rytov_var_spherical_parent)
 
 cn2_computed = hufnagel_valley(altitude_vector*1e3, wind_speed_rms=wind_rms, reference_ground=reference_cn2)
 
 # save_data = np.column_stack((altitude_vector, rytov_var_plane_list, rytov_var_spherical_list, cn2_computed))   
 
 plt.figure()
-plt.plot(altitude_vector, rytov_var_plane_list, label="Plane Wave")
 plt.plot(altitude_vector, rytov_var_spherical_list, label="Spherical Wave")
+plt.plot(altitude_vector, rytov_var_plane_parent_list, label="Plane Wave (Parent)")
+plt.plot(altitude_vector, rytov_var_spherical_parent_list, "o", label="Spherical Wave (Parent)")
 plt.xlabel("Platform altitude (km)")
 plt.ylabel("Rytov Variance")
 plt.title("Rytov variance in downlink channel")
