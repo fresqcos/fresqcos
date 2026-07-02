@@ -27,7 +27,7 @@ if __name__ == "__main__":
     zenith_angle = 80
     wind_rms = 10
     reference_cn2 = 1.7e-14
-    altitude_vector = np.linspace(gs_altitude, platform_altitude, 1000)
+    altitude_vector = np.linspace(5, platform_altitude, 1000)
     
     
     tx_telescope = Transmitter(
@@ -82,6 +82,14 @@ if __name__ == "__main__":
     rytov_var_spherical_list = []
     rytov_var_plane_parent_list = []
     rytov_var_spherical_parent_list = []
+    coherence_width_plane_parent_list = []
+    coherence_width_spherical_parent_list = []
+    coherence_width_gaussian_parent_list = []
+    conherence_width_plane_list = []
+    conherence_width_spherical_list = []
+    wandering_variance_plane_list = []
+    wandering_variance_spherical_list = []
+    wandering_variance_gaussian_list = []
 
     for i in range(len(altitude_vector)):
 
@@ -95,6 +103,25 @@ if __name__ == "__main__":
         rytov_var_plane_parent_list.append(rytov_var_plane_parent)
         rytov_var_spherical_parent_list.append(rytov_var_spherical_parent)
 
+        coherence_width_plane_parent = free_space_channel.compute_coherence_width(zenith_angle, link_type="downlink", wave_type="plane")
+        coherence_width_spherical_parent = free_space_channel.compute_coherence_width(zenith_angle, link_type="downlink", wave_type="spherical")
+        coherence_width_gaussian_parent = free_space_channel.compute_coherence_width(zenith_angle, link_type="downlink", wave_type="gaussian")
+        coherence_width_plane = free_space_channel.compute_coherence_width_plane(zenith_angle)
+        coherence_width_spherical = free_space_channel.compute_coherence_width_spherical(zenith_angle)
+        coherence_width_plane_parent_list.append(coherence_width_plane_parent)
+        coherence_width_spherical_parent_list.append(coherence_width_spherical_parent)
+        coherence_width_gaussian_parent_list.append(coherence_width_gaussian_parent)
+        conherence_width_plane_list.append(coherence_width_plane)
+        conherence_width_spherical_list.append(coherence_width_spherical)
+
+        wandering_variance_plane = free_space_channel.compute_wandering_variance(zenith_angle, link_type="downlink", wave_type="plane")
+        wandering_variance_spherical = free_space_channel.compute_wandering_variance(zenith_angle, link_type="downlink", wave_type="spherical")
+        wandering_variance_gaussian = free_space_channel.compute_wandering_variance(zenith_angle, link_type="downlink", wave_type="gaussian")
+        wandering_variance_plane_list.append(wandering_variance_plane)
+        wandering_variance_spherical_list.append(wandering_variance_spherical)
+        wandering_variance_gaussian_list.append(wandering_variance_gaussian)
+
+
 cn2_computed = hufnagel_valley(altitude_vector*1e3, wind_speed_rms=wind_rms, reference_ground=reference_cn2)
 
 # save_data = np.column_stack((altitude_vector, rytov_var_plane_list, rytov_var_spherical_list, cn2_computed))   
@@ -106,6 +133,30 @@ plt.plot(altitude_vector, rytov_var_spherical_parent_list, "o", label="Spherical
 plt.xlabel("Platform altitude (km)")
 plt.ylabel("Rytov Variance")
 plt.title("Rytov variance in downlink channel")
+plt.legend()
+plt.grid()
+plt.tight_layout()
+
+plt.figure()
+plt.plot(altitude_vector, coherence_width_plane_parent_list, label="Plane Wave (Parent)")
+plt.plot(altitude_vector, coherence_width_spherical_parent_list, label="Spherical Wave (Parent)")
+plt.plot(altitude_vector, coherence_width_gaussian_parent_list, label="Gaussian Beam (Parent)")
+plt.plot(altitude_vector, conherence_width_plane_list, "o", label="Plane Wave")
+plt.plot(altitude_vector, conherence_width_spherical_list, "o", label="Spherical Wave")
+plt.xlabel("Platform altitude (km)")
+plt.ylabel("Coherence Width (m)")
+plt.title("Coherence Width in Downlink Channel")
+plt.legend()
+plt.grid()
+plt.tight_layout()
+
+plt.figure()
+plt.plot(altitude_vector, wandering_variance_plane_list, label="Plane Wave")
+plt.plot(altitude_vector, wandering_variance_spherical_list, label="Spherical Wave")
+plt.plot(altitude_vector, wandering_variance_gaussian_list, label="Gaussian Beam")
+plt.xlabel("Platform altitude (km)")
+plt.ylabel("Wandering Variance (m^2)")
+plt.title("Wandering Variance in Downlink Channel")
 plt.legend()
 plt.grid()
 plt.tight_layout()
