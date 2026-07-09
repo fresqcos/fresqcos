@@ -27,7 +27,7 @@ if __name__ == "__main__":
     zenith_angle = 80
     wind_rms = 10
     reference_cn2 = 1.7e-14
-    altitude_vector = np.linspace(5, platform_altitude, 1000)
+    altitude_vector = np.linspace(5, platform_altitude, 200)
     
     
     tx_telescope = Transmitter(
@@ -71,12 +71,14 @@ if __name__ == "__main__":
         transmitter_station=tx_station,
         receiver_station=rx_station,
         atmospheric_channel=atmosphere,
+        zenith_angle_deg=zenith_angle
     )
 
     free_space_channel = FreeSpaceChannel(
         transmitter_station=tx_station,
         receiver_station=rx_station,
         atmospheric_channel=atmosphere,
+        zenith_angle_deg=zenith_angle
     )
 
     rytov_var_spherical_list = []
@@ -96,27 +98,27 @@ if __name__ == "__main__":
         down_channel.transmitter_station.altitude = altitude_vector[i]
         free_space_channel.transmitter_station.altitude = altitude_vector[i]
 
-        rytov_var_spherical = down_channel.compute_rytov_variance(zenith_angle)
-        rytov_var_plane_parent = free_space_channel.compute_rytov_variance(zenith_angle, link_type="downlink", wave_type="plane")
-        rytov_var_spherical_parent = free_space_channel.compute_rytov_variance(zenith_angle, link_type="downlink", wave_type="spherical")
+        rytov_var_spherical = down_channel.compute_rytov_variance()
+        rytov_var_plane_parent = free_space_channel.compute_rytov_variance(link_type="downlink", wave_type="plane")
+        rytov_var_spherical_parent = free_space_channel.compute_rytov_variance(link_type="downlink", wave_type="spherical")
         rytov_var_spherical_list.append(rytov_var_spherical)
         rytov_var_plane_parent_list.append(rytov_var_plane_parent)
         rytov_var_spherical_parent_list.append(rytov_var_spherical_parent)
 
-        coherence_width_plane_parent = free_space_channel.compute_coherence_width(zenith_angle, link_type="downlink", wave_type="plane")
-        coherence_width_spherical_parent = free_space_channel.compute_coherence_width(zenith_angle, link_type="downlink", wave_type="spherical")
-        coherence_width_gaussian_parent = free_space_channel.compute_coherence_width(zenith_angle, link_type="downlink", wave_type="gaussian")
-        coherence_width_plane = free_space_channel.compute_coherence_width_plane(zenith_angle)
-        coherence_width_spherical = free_space_channel.compute_coherence_width_spherical(zenith_angle)
+        coherence_width_plane_parent = free_space_channel.compute_coherence_width(link_type="downlink", wave_type="plane")
+        coherence_width_spherical_parent = free_space_channel.compute_coherence_width(link_type="downlink", wave_type="spherical")
+        coherence_width_gaussian_parent = free_space_channel.compute_coherence_width(link_type="downlink", wave_type="gaussian")
+        coherence_width_plane = free_space_channel.compute_coherence_width_plane()
+        coherence_width_spherical = free_space_channel.compute_coherence_width_spherical()
         coherence_width_plane_parent_list.append(coherence_width_plane_parent)
         coherence_width_spherical_parent_list.append(coherence_width_spherical_parent)
         coherence_width_gaussian_parent_list.append(coherence_width_gaussian_parent)
         conherence_width_plane_list.append(coherence_width_plane)
         conherence_width_spherical_list.append(coherence_width_spherical)
 
-        wandering_variance_plane = free_space_channel.compute_wandering_variance(zenith_angle, link_type="downlink", wave_type="plane")
-        wandering_variance_spherical = free_space_channel.compute_wandering_variance(zenith_angle, link_type="downlink", wave_type="spherical")
-        wandering_variance_gaussian = free_space_channel.compute_wandering_variance(zenith_angle, link_type="downlink", wave_type="gaussian")
+        wandering_variance_plane = free_space_channel.compute_wandering_variance(link_type="downlink", wave_type="plane")
+        wandering_variance_spherical = free_space_channel.compute_wandering_variance(link_type="downlink", wave_type="spherical")
+        wandering_variance_gaussian = free_space_channel.compute_wandering_variance(link_type="downlink", wave_type="gaussian")
         wandering_variance_plane_list.append(wandering_variance_plane)
         wandering_variance_spherical_list.append(wandering_variance_spherical)
         wandering_variance_gaussian_list.append(wandering_variance_gaussian)

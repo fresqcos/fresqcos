@@ -2,10 +2,13 @@
 
 from abc import ABC, abstractmethod
 from enum import Enum
+
+from tomlkit import value
 from fresqcos.channels.stations import ReceiverStation, TransmitterStation
 from fresqcos.channels.geometry import (
     slant_range_from_coordinates,
     compute_sec,
+    zenith_angle_from_coordinates,
 )
 from fresqcos.channels.atmosphere import Atmosphere
 from scipy.integrate import quad
@@ -299,6 +302,7 @@ class FreeSpaceChannel(Channel):
         transmitter_station: TransmitterStation,
         receiver_station: ReceiverStation,
         atmospheric_channel: Atmosphere,
+        zenith_angle_deg: float | None = None,
     ) -> None:
         """Initialize the free-space channel with the given parameters.
 
@@ -310,10 +314,14 @@ class FreeSpaceChannel(Channel):
             The station hosting the receiver.
         atmospheric_channel : Atmosphere
             The atmospheric effects on the channel.
+        zenith_angle_deg : float, optional
+            The zenith angle of the link in degrees. If not provided,
+            it will be computed from the station coordinates.
         """
         self.transmitter_station = transmitter_station
         self.receiver_station = receiver_station
         self.atmospheric_channel = atmospheric_channel
+        self.zenith_angle_deg = zenith_angle_deg
 
     @property
     def transmitter_station(self) -> TransmitterStation:
@@ -354,9 +362,14 @@ class FreeSpaceChannel(Channel):
             )
         self._atmospheric_channel = value
 
-    def compute_channel_length(self) -> float:
-        """Calculate the slant range between the two stations."""
-        return slant_range_from_coordinates(
+    @property
+    def zenith_angle_deg(self) -> float:
+        """Return the zenith angle of the link in degrees.
+        If not provided, it is computed from the station coordinates.
+        """
+        if self._zenith_angle_deg is not None:
+            return self._zenith_angle_deg
+        return zenith_angle_from_coordinates(
             self.transmitter_station.latitude,
             self.transmitter_station.longitude,
             self.transmitter_station.altitude,
@@ -365,7 +378,43 @@ class FreeSpaceChannel(Channel):
             self.receiver_station.altitude,
         )
 
-    def normalized_distance_variable(self, link_type: LinkType) -> callable:
+    @zenith_angle_deg.setter
+    def zenith_angle_deg(self, value: float | None) -> None:
+        if value is not None and not (0 <= value <= 180):
+            raise ValueError(f"zenith_angle must be in [0, 180] degrees, got {value}")
+        self._zenith_angle_deg = value
+
+    @property
+    def zenith_angle_rad(self) -> float:
+        """Return the zenith angle in radians."""
+        return np.deg2rad(self.zenith_angle_deg)
+
+    @property
+    def transmitter_altitude_m(self) -> float:
+        """Return the altitude of the transmitter station in meters."""
+        return self.transmitter_station.altitude * 1e3
+
+    @property
+    def receiver_altitude_m(self) -> float:
+        """Return the altitude of the receiver station in meters."""
+        return self.receiver_station.altitude * 1e3
+
+    @property
+    def channel_length_m(self) -> float:
+        """Return the length of the free-space channel in meters."""
+        return (
+            slant_range_from_coordinates(
+                self.transmitter_station.latitude,
+                self.transmitter_station.longitude,
+                self.transmitter_station.altitude,
+                self.receiver_station.latitude,
+                self.receiver_station.longitude,
+                self.receiver_station.altitude,
+            )
+            * 1e3
+        )
+
+    def _normalized_distance_variable(self, link_type: LinkType) -> callable:
         """Calculate the normalized distance variable xi for a given altitude h and link type.
 
         Parameters
@@ -378,8 +427,8 @@ class FreeSpaceChannel(Channel):
         callable
             The normalized distance variable xi as a function of altitude.
         """
-        h_rx = self.receiver_station.altitude * 1e3
-        h_tx = self.transmitter_station.altitude * 1e3
+        h_rx = self.receiver_altitude_m
+        h_tx = self.transmitter_altitude_m
         if link_type == LinkType.DOWNLINK:
             xi = lambda h: (h - h_rx) / (h_tx - h_rx)
         elif link_type == LinkType.UPLINK:
@@ -421,15 +470,11 @@ class FreeSpaceChannel(Channel):
         else:
             raise ValueError(f"Invalid wave_type: {wave_type}")
 
-    def compute_rytov_variance(
-        self, zenith_angle: float, link_type: LinkType, wave_type: WaveType
-    ) -> float:
+    def compute_rytov_variance(self, link_type: LinkType, wave_type: WaveType) -> float:
         """Compute the Rytov variance of the link [Andrews/Phillips, 2005, Eqs 12.92, 5.15 and 9.93].
 
         Parameters
         ----------
-        zenith_angle : float
-            The zenith angle of the link in degrees.
         link_type : LinkType
             Geometry of the link: HORIZONTAL, UPLINK, or DOWNLINK.
         wave_type : WaveType
@@ -441,7 +486,7 @@ class FreeSpaceChannel(Channel):
             The Rytov variance.
         """
         k = 2 * np.pi / self.transmitter_station.transmitter.wavelength
-        length = 1e3 * self.compute_channel_length()
+        length = self.channel_length_m
 
         radius_of_curvature_in, waist_radius_in = self._wave_parameters_in(
             wave_type, length
@@ -454,9 +499,9 @@ class FreeSpaceChannel(Channel):
         )
 
         if link_type == LinkType.DOWNLINK or link_type == LinkType.UPLINK:
-            receiver_alt = self.receiver_station.altitude * 1e3
-            transmitter_alt = self.transmitter_station.altitude * 1e3
-            xi = self.normalized_distance_variable(link_type)
+            receiver_alt = self.receiver_altitude_m
+            transmitter_alt = self.transmitter_altitude_m
+            xi = self._normalized_distance_variable(link_type)
             integral = compute_slant_integral_3(
                 self.atmospheric_channel.cn2_profile,
                 receiver_alt,
@@ -470,7 +515,7 @@ class FreeSpaceChannel(Channel):
                 * integral
                 * k ** (7 / 6)
                 * (transmitter_alt - receiver_alt) ** (5 / 6)
-                * compute_sec(zenith_angle) ** (11 / 6)
+                * compute_sec(self.zenith_angle_deg) ** (11 / 6)
             )
         elif link_type == LinkType.HORIZONTAL:
             rytov_var_plane = (
@@ -495,14 +540,12 @@ class FreeSpaceChannel(Channel):
         return rytov_var
 
     def compute_coherence_width(
-        self, zenith_angle: float, link_type: LinkType, wave_type: WaveType
+        self, link_type: LinkType, wave_type: WaveType
     ) -> float:
         """Compute the coherence width of the propagated beam [Andrews/Phillips, 2005, derived from Eq 12.27, Eq 6.132].
 
         Parameters
         ----------
-        zenith_angle : float
-            The zenith angle of the link in degrees.
         link_type : LinkType
             Geometry of the link: HORIZONTAL, UPLINK, or DOWNLINK.
         wave_type : WaveType
@@ -514,7 +557,7 @@ class FreeSpaceChannel(Channel):
             The coherence width in meters.
         """
         k = 2 * np.pi / self.transmitter_station.transmitter.wavelength
-        length = 1e3 * self.compute_channel_length()
+        length = self.channel_length_m
 
         radius_of_curvature_in, waist_radius_in = self._wave_parameters_in(
             wave_type, length
@@ -525,14 +568,14 @@ class FreeSpaceChannel(Channel):
             waist_radius_in,
             radius_of_curvature_in,
         )
-        xi = self.normalized_distance_variable(link_type)
+        xi = self._normalized_distance_variable(link_type)
 
         if length == 0:
             coherence_width = np.inf
         else:
             if link_type == LinkType.DOWNLINK or link_type == LinkType.UPLINK:
-                receiver_alt = self.receiver_station.altitude * 1e3
-                transmitter_alt = self.transmitter_station.altitude * 1e3
+                receiver_alt = self.receiver_altitude_m
+                transmitter_alt = self.transmitter_altitude_m
                 mu_1 = compute_slant_integral_1(
                     self.atmospheric_channel.cn2_profile,
                     receiver_alt,
@@ -547,7 +590,7 @@ class FreeSpaceChannel(Channel):
                     xi,
                 )
                 coherence_width = (
-                    np.cos(np.deg2rad(zenith_angle))
+                    np.cos(self.zenith_angle_rad)
                     / (0.423 * k**2 * (mu_1 + 0.62 * mu_2 * lambda_out ** (11 / 6)))
                 ) ** (3 / 5)
             elif link_type == LinkType.HORIZONTAL:
@@ -564,36 +607,38 @@ class FreeSpaceChannel(Channel):
                 ) ** (3 / 5) * coherence_width_plane
         return coherence_width
 
-    def compute_coherence_width_plane(self, zenith_angle: float) -> float:
+    def compute_coherence_width_plane(self) -> float:
         """Compute coherence width of plane wave for a downlink channel [Andrews/Phillips, 2005].
 
-        ## Returns
-        `coherence_width` : float
+        Returns
+        -------
+        coherence_width : float
             Coherence width for requested input parameters.
         """
-        receiver_alt = self.receiver_station.altitude * 1e3
-        transmitter_alt = self.transmitter_station.altitude * 1e3
+        receiver_alt = self.receiver_altitude_m
+        transmitter_alt = self.transmitter_altitude_m
         k = 2 * np.pi / self.transmitter_station.transmitter.wavelength
         scale = 1e14  # Scale factor to avoid numerical issues in integration
         integrand = lambda h: self.atmospheric_channel.cn2_profile(h) * scale
         coherence_width = (
             0.423
             * k**2
-            * compute_sec(zenith_angle)
+            * compute_sec(self.zenith_angle_deg)
             * quad(integrand, receiver_alt, transmitter_alt)[0]
             / scale
         ) ** (-3 / 5)
         return coherence_width
 
-    def compute_coherence_width_spherical(self, zenith_angle: float) -> float:
+    def compute_coherence_width_spherical(self) -> float:
         """Compute coherence width of spherical wave for a downlink channel [Andrews/Phillips, 2005].
 
-        ## Returns
-        `coherence_width` : float
+        Returns
+        -------
+        coherence_width : float
             Coherence width for requested input parameters.
         """
-        receiver_alt = self.receiver_station.altitude * 1e3
-        transmitter_alt = self.transmitter_station.altitude * 1e3
+        receiver_alt = self.receiver_altitude_m
+        transmitter_alt = self.transmitter_altitude_m
         k = 2 * np.pi / self.transmitter_station.transmitter.wavelength
         scale = 1e14  # Scale factor to avoid numerical issues in integration
         integrand = (
@@ -604,11 +649,106 @@ class FreeSpaceChannel(Channel):
         coherence_width = (
             0.423
             * k**2
-            * compute_sec(zenith_angle)
+            * compute_sec(self.zenith_angle_deg)
             * quad(integrand, receiver_alt, transmitter_alt)[0]
             / scale
         ) ** (-3 / 5)
         return coherence_width
+
+    def compute_wandering_variance(
+        self, link_type: LinkType, wave_type: WaveType
+    ) -> float:
+        """Compute the beam wandering variance for a free-space optical channel.
+
+        Parameters
+        ----------
+        link_type : LinkType
+            Geometry of the link: HORIZONTAL, UPLINK, or DOWNLINK.
+        wave_type : WaveType
+            Type of the wave: PLANE, SPHERICAL OR GAUSSIAN.
+
+        Returns
+        -------
+        float
+            The beam wandering variance in square meters.
+        """
+        length = self.channel_length_m
+
+        radius_of_curvature_in, waist_radius_in = self._wave_parameters_in(
+            wave_type, length
+        )
+        theta_in, lambda_in = input_plane_parameters(
+            length,
+            self.transmitter_station.transmitter.wavelength,
+            waist_radius_in,
+            radius_of_curvature_in,
+        )
+        theta_bar_in = 1 - theta_in
+        xi = self._normalized_distance_variable(link_type)
+        rytov_var = self.compute_rytov_variance(link_type, wave_type)
+        tx_waist = self.transmitter_station.transmitter.waist_radius
+
+        if link_type == LinkType.DOWNLINK or link_type == LinkType.UPLINK:
+            receiver_alt = self.receiver_altitude_m
+            transmitter_alt = self.transmitter_altitude_m
+            xi = self._normalized_distance_variable(link_type)
+            scale = 1e14  # Scale factor to avoid numerical issues in integration
+            integrand = (
+                lambda h: self.atmospheric_channel.cn2_profile(h)
+                * xi(h) ** 2
+                / (
+                    (theta_in + theta_bar_in * xi(h)) ** 2
+                    + 1.63 * rytov_var ** (6 / 5) * lambda_in * (1 - xi(h)) ** (16 / 5)
+                )
+                ** (1 / 6)
+                * scale
+            )
+            integral = quad(integrand, receiver_alt, transmitter_alt)[0]
+            wandering_variance = (
+                7.25
+                * compute_sec(self.zenith_angle_deg) ** 3
+                * tx_waist ** (-1 / 3)
+                * integral
+                / scale
+            )
+        elif link_type == LinkType.HORIZONTAL:
+            integrand = lambda xi: xi**2 / (
+                (theta_in + theta_bar_in * xi) ** 2
+                + 1.63 * rytov_var ** (6 / 5) * lambda_in * (1 - xi) ** (16 / 5)
+            ) ** (1 / 6)
+            integral = quad(integrand, 0, 1)[0]
+            wandering_variance = (
+                7.25
+                * self.atmospheric_channel.cn2_profile
+                * compute_sec(self.zenith_angle_deg) ** 3
+                * length**3
+                * tx_waist ** (-1 / 3)
+                * integral
+            )
+        else:
+            raise ValueError(f"Invalid link_type: {link_type}")
+
+        return wandering_variance
+
+    def compute_wandering_variance_plane(self) -> float:
+        """Compute the beam wandering variance for a plane wave in a free-space optical channel.
+
+        Returns
+        -------
+        float
+            The beam wandering variance in square meters.
+        """
+        length = self.channel_length_m
+        tx_waist = self.transmitter_station.transmitter.waist_radius
+
+        wandering_variance = (
+            2.42
+            * self.atmospheric_channel.cn2_profile
+            * compute_sec(self.zenith_angle_deg) ** 3
+            * length**3
+            * tx_waist ** (-1 / 3)
+        )
+        return wandering_variance
 
 
 class DownlinkChannel(FreeSpaceChannel):
@@ -619,6 +759,7 @@ class DownlinkChannel(FreeSpaceChannel):
         transmitter_station: TransmitterStation,
         receiver_station: ReceiverStation,
         atmospheric_channel: Atmosphere,
+        zenith_angle_deg: float | None = None,
     ) -> None:
         """Initialize the downlink channel with the given parameters.
 
@@ -631,9 +772,11 @@ class DownlinkChannel(FreeSpaceChannel):
         atmospheric_channel : Atmosphere
             The atmospheric effects on the channel.
         """
-        super().__init__(transmitter_station, receiver_station, atmospheric_channel)
+        super().__init__(
+            transmitter_station, receiver_station, atmospheric_channel, zenith_angle_deg
+        )
 
-    def compute_rytov_variance(self, zenith_angle: float) -> float:
+    def compute_rytov_variance(self) -> float:
         """Compute rytov variance of a spherical wave for a downlink channel.
 
         Returns
@@ -642,11 +785,11 @@ class DownlinkChannel(FreeSpaceChannel):
             Rytov variance for spherical wave propagating in the downlink channel.
         """
         rytov_var = super().compute_rytov_variance(
-            zenith_angle=zenith_angle, link_type="downlink", wave_type="spherical"
+            link_type="downlink", wave_type="spherical"
         )
         return rytov_var
 
-    def compute_coherence_width(self, zenith_angle: float) -> float:
+    def compute_coherence_width(self) -> float:
         """Compute coherence width for a downlink channel.
 
         Returns
@@ -655,7 +798,7 @@ class DownlinkChannel(FreeSpaceChannel):
             Coherence width for spherical wave propagating in the downlink channel.
         """
         coherence_width = super().compute_coherence_width(
-            zenith_angle=zenith_angle, link_type="downlink", wave_type="spherical"
+            link_type="downlink", wave_type="spherical"
         )
         return coherence_width
 
@@ -692,7 +835,7 @@ class UplinkChannel(FreeSpaceChannel):
     def compute_channel_losses(self) -> float:
         pass
 
-    def compute_rytov_variance(self, zenith_angle: float) -> float:
+    def compute_rytov_variance(self) -> float:
         """Compute rytov variance for an uplink channel.
 
         Returns
@@ -701,11 +844,11 @@ class UplinkChannel(FreeSpaceChannel):
             Rytov variance for spherical wave propagating in the uplink channel.
         """
         rytov_var = super().compute_rytov_variance(
-            zenith_angle=zenith_angle, link_type="uplink", wave_type="spherical"
+            link_type="uplink", wave_type="spherical"
         )
         return rytov_var
 
-    def compute_coherence_width(self, zenith_angle: float) -> float:
+    def compute_coherence_width(self) -> float:
         """Compute coherence width for an uplink channel.
 
         Returns
@@ -714,7 +857,7 @@ class UplinkChannel(FreeSpaceChannel):
             Coherence width for spherical wave propagating in the uplink channel.
         """
         coherence_width = super().compute_coherence_width(
-            zenith_angle=zenith_angle, link_type="uplink", wave_type="spherical"
+            link_type="uplink", wave_type="spherical"
         )
         return coherence_width
 
