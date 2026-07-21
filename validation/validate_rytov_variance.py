@@ -1,10 +1,11 @@
-"""Validate downlink coherence width against plane/spherical reference formulas."""
+"""Validate rytov variance against plane/spherical reference formulas."""
 
 from fresqcos.telescopes import Transmitter, Receiver
 from fresqcos.channels.stations import TransmitterStation, ReceiverStation
 from fresqcos.channels.atmosphere import Atmosphere
 from fresqcos.channels.cn2 import hufnagel_valley
 from fresqcos.channels.channels import FreeSpaceChannel
+from fresqcos.channels.geometry import compute_sec
 from functools import partial
 import numpy as np
 from scipy.integrate import quad
@@ -16,8 +17,9 @@ matplotlib.rcParams['font.family'] = 'STIXGeneral'
 matplotlib.rcParams['font.size'] = 14
 
 
-def coherence_width_plane_downlink(channel: FreeSpaceChannel) -> float:
-    """Compute coherence width of plane wave for a downlink channel [Andrews/Phillips, 2005].
+def rytov_variance_plane_downlink(channel: FreeSpaceChannel) -> float:
+    """Compute rytov variance of a plane wave for a 
+    downlink channel [Andrews/Phillips, 2005, from Eqs 12.92 and 12.37].
 
     Parameters
     ----------
@@ -26,57 +28,61 @@ def coherence_width_plane_downlink(channel: FreeSpaceChannel) -> float:
 
     Returns
     -------
-    coherence_width : float
-        Coherence width for requested input parameters.
+    rytov_var : float
+        Rytov variance for plane wave propagating in the downlink channel.
     """
     receiver_alt = channel.receiver_altitude_m
     transmitter_alt = channel.transmitter_altitude_m
     k = 2 * np.pi / channel.transmitter_station.transmitter.wavelength
-
-    scale = 1e14
-    integrand = lambda h: channel.atmospheric_channel.cn2_profile(h) * scale
-
-    return (
-        0.423
-        * k**2
-        * (1 / np.cos(channel.zenith_angle_rad))
-        * quad(integrand, receiver_alt, transmitter_alt)[0]
-        / scale
-    ) ** (-3 / 5)
-
-
-def coherence_width_spherical_downlink(channel: FreeSpaceChannel) -> float:
-    """Compute coherence width of spherical wave for a downlink channel [Andrews/Phillips, 2005].
-
-    Parameters
-    ----------
-    channel : FreeSpaceChannel
-        Free space channel object.
-
-    Returns
-    -------
-    coherence_width : float
-        Coherence width for requested input parameters.
-    """
-    receiver_alt = channel.receiver_altitude_m
-    transmitter_alt = channel.transmitter_altitude_m
-    k = 2 * np.pi / channel.transmitter_station.transmitter.wavelength
-
-    scale = 1e14
-
+    scale = 1e14  # Scale factor to avoid numerical issues in integration
     integrand = (
         lambda h: channel.atmospheric_channel.cn2_profile(h)
         * scale
-        * ((transmitter_alt - h) / (transmitter_alt - receiver_alt)) ** (5 / 3)
+        * (h - receiver_alt) ** (5 / 6)
     )
-
-    return (
-        0.423
-        * k**2
-        * (1 / np.cos(channel.zenith_angle_rad))
+    rytov_var = (
+        2.25
+        * k ** (7 / 6)
+        * compute_sec(channel.zenith_angle_deg) ** (11 / 6)
         * quad(integrand, receiver_alt, transmitter_alt)[0]
         / scale
-    ) ** (-3 / 5)
+    )
+    return rytov_var
+
+
+def rytov_variance_spherical_downlink(channel: FreeSpaceChannel) -> float:
+    """Compute rytov variance of a spherical wave for a 
+    downlink channel [Andrews/Phillips, 2005, from Eqs 12.92 and 12.37].
+
+    Parameters
+    ----------
+    channel : FreeSpaceChannel
+        Free space channel object.
+
+    Returns
+    -------
+    rytov_var :float
+        Rytov variance for spherical wave propagating in the downlink channel.
+    """
+    receiver_alt = channel.receiver_altitude_m
+    transmitter_alt = channel.transmitter_altitude_m
+    k = 2 * np.pi / channel.transmitter_station.transmitter.wavelength
+    scale = 1e14  # Scale factor to avoid numerical issues in integration
+    integrand = (
+        lambda h: channel.atmospheric_channel.cn2_profile(h)
+        * scale
+        * (h - receiver_alt) ** (5 / 6)
+        * ((transmitter_alt - h) / (transmitter_alt - receiver_alt)) ** (5 / 6)
+    )
+    rytov_var = (
+        2.25
+        * k ** (7 / 6)
+        * compute_sec(channel.zenith_angle_deg) ** (11 / 6)
+        * quad(integrand, receiver_alt, transmitter_alt)[0]
+        / scale
+    )
+    return rytov_var
+
 
 if __name__ == "__main__":
     wvln = 1550e-9
@@ -138,44 +144,44 @@ if __name__ == "__main__":
         zenith_angle_deg=zenith_angle,
     )
 
-    coherence_width_general_plane_list = []
-    coherence_width_general_spherical_list = []
-    coherence_width_general_gaussian_list = []
-    coherence_width_plane_list = []
-    coherence_width_spherical_list = []
+    rytov_variance_general_plane_list = []
+    rytov_variance_general_spherical_list = []
+    rytov_variance_general_gaussian_list = []
+    rytov_variance_plane_list = []
+    rytov_variance_width_spherical_list = []
 
     for i in range(len(altitude_vector)):
 
         free_space_channel.transmitter_station.altitude = altitude_vector[i]
     
-        coherence_width_general_plane = free_space_channel.compute_coherence_width(
+        rytov_variance_general_plane = free_space_channel.compute_rytov_variance(
             link_type="downlink", 
             wave_type="plane")
-        coherence_width_general_spherical = free_space_channel.compute_coherence_width(
+        rytov_variance_general_spherical = free_space_channel.compute_rytov_variance(
             link_type="downlink", 
             wave_type="spherical")
-        coherence_width_general_gaussian = free_space_channel.compute_coherence_width(
+        rytov_variance_general_gaussian = free_space_channel.compute_rytov_variance(
             link_type="downlink", 
             wave_type="gaussian")
-        coherence_width_plane = coherence_width_plane_downlink(free_space_channel)
-        coherence_width_spherical = coherence_width_spherical_downlink(free_space_channel)
-        coherence_width_general_plane_list.append(coherence_width_general_plane)
-        coherence_width_general_spherical_list.append(coherence_width_general_spherical)
-        coherence_width_general_gaussian_list.append(coherence_width_general_gaussian)
-        coherence_width_plane_list.append(coherence_width_plane)
-        coherence_width_spherical_list.append(coherence_width_spherical)
+        rytov_variance_plane = rytov_variance_plane_downlink(free_space_channel)
+        rytov_variance_spherical = rytov_variance_spherical_downlink(free_space_channel)
+        rytov_variance_general_plane_list.append(rytov_variance_general_plane)
+        rytov_variance_general_spherical_list.append(rytov_variance_general_spherical)
+        rytov_variance_general_gaussian_list.append(rytov_variance_general_gaussian)
+        rytov_variance_plane_list.append(rytov_variance_plane)
+        rytov_variance_width_spherical_list.append(rytov_variance_spherical)
 
 
 plt.figure()
-plt.plot(altitude_vector, coherence_width_general_plane_list, label="Plane Wave (General)")
-plt.plot(altitude_vector, coherence_width_general_spherical_list, label="Spherical Wave (General)")
-plt.plot(altitude_vector, coherence_width_general_gaussian_list, label="Gaussian Beam (General)")
+plt.plot(altitude_vector, rytov_variance_general_plane_list, label="Plane Wave (General)")
+plt.plot(altitude_vector, rytov_variance_general_spherical_list, label="Spherical Wave (General)")
+plt.plot(altitude_vector, rytov_variance_general_gaussian_list, label="Gaussian Beam (General)")
 plt.gca().set_prop_cycle(None)
-plt.plot(altitude_vector, coherence_width_plane_list, "o", label="Plane Wave (Reference)")
-plt.plot(altitude_vector, coherence_width_spherical_list, "o", label="Spherical Wave (Reference)")
+plt.plot(altitude_vector, rytov_variance_plane_list, "o", label="Plane Wave (Reference)")
+plt.plot(altitude_vector, rytov_variance_width_spherical_list, "o", label="Spherical Wave (Reference)")
 plt.xlabel("Platform altitude (km)")
-plt.ylabel("Coherence Width (m)")
-plt.title("Coherence Width in Downlink Channel")
+plt.ylabel("Rytov variance")
+plt.title("Rytov variance in Downlink Channel")
 plt.legend()
 plt.grid()
 plt.tight_layout()

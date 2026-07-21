@@ -568,12 +568,12 @@ class FreeSpaceChannel(Channel):
             waist_radius_in,
             radius_of_curvature_in,
         )
-        xi = self._normalized_distance_variable(link_type)
 
         if length == 0:
             coherence_width = np.inf
         else:
             if link_type == LinkType.DOWNLINK or link_type == LinkType.UPLINK:
+                xi = self._normalized_distance_variable(link_type)
                 receiver_alt = self.receiver_altitude_m
                 transmitter_alt = self.transmitter_altitude_m
                 mu_1 = compute_slant_integral_1(
@@ -607,54 +607,6 @@ class FreeSpaceChannel(Channel):
                 ) ** (3 / 5) * coherence_width_plane
         return coherence_width
 
-    def compute_coherence_width_plane(self) -> float:
-        """Compute coherence width of plane wave for a downlink channel [Andrews/Phillips, 2005].
-
-        Returns
-        -------
-        coherence_width : float
-            Coherence width for requested input parameters.
-        """
-        receiver_alt = self.receiver_altitude_m
-        transmitter_alt = self.transmitter_altitude_m
-        k = 2 * np.pi / self.transmitter_station.transmitter.wavelength
-        scale = 1e14  # Scale factor to avoid numerical issues in integration
-        integrand = lambda h: self.atmospheric_channel.cn2_profile(h) * scale
-        coherence_width = (
-            0.423
-            * k**2
-            * compute_sec(self.zenith_angle_deg)
-            * quad(integrand, receiver_alt, transmitter_alt)[0]
-            / scale
-        ) ** (-3 / 5)
-        return coherence_width
-
-    def compute_coherence_width_spherical(self) -> float:
-        """Compute coherence width of spherical wave for a downlink channel [Andrews/Phillips, 2005].
-
-        Returns
-        -------
-        coherence_width : float
-            Coherence width for requested input parameters.
-        """
-        receiver_alt = self.receiver_altitude_m
-        transmitter_alt = self.transmitter_altitude_m
-        k = 2 * np.pi / self.transmitter_station.transmitter.wavelength
-        scale = 1e14  # Scale factor to avoid numerical issues in integration
-        integrand = (
-            lambda h: self.atmospheric_channel.cn2_profile(h)
-            * scale
-            * ((transmitter_alt - h) / (transmitter_alt - receiver_alt)) ** (5 / 3)
-        )
-        coherence_width = (
-            0.423
-            * k**2
-            * compute_sec(self.zenith_angle_deg)
-            * quad(integrand, receiver_alt, transmitter_alt)[0]
-            / scale
-        ) ** (-3 / 5)
-        return coherence_width
-
     def compute_wandering_variance(
         self, link_type: LinkType, wave_type: WaveType
     ) -> float:
@@ -684,7 +636,6 @@ class FreeSpaceChannel(Channel):
             radius_of_curvature_in,
         )
         theta_bar_in = 1 - theta_in
-        xi = self._normalized_distance_variable(link_type)
         rytov_var = self.compute_rytov_variance(link_type, wave_type)
         tx_waist = self.transmitter_station.transmitter.waist_radius
 
@@ -728,26 +679,6 @@ class FreeSpaceChannel(Channel):
         else:
             raise ValueError(f"Invalid link_type: {link_type}")
 
-        return wandering_variance
-
-    def compute_wandering_variance_plane(self) -> float:
-        """Compute the beam wandering variance for a plane wave in a free-space optical channel.
-
-        Returns
-        -------
-        float
-            The beam wandering variance in square meters.
-        """
-        length = self.channel_length_m
-        tx_waist = self.transmitter_station.transmitter.waist_radius
-
-        wandering_variance = (
-            2.42
-            * self.atmospheric_channel.cn2_profile
-            * compute_sec(self.zenith_angle_deg) ** 3
-            * length**3
-            * tx_waist ** (-1 / 3)
-        )
         return wandering_variance
 
 
