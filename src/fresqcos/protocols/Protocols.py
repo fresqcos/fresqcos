@@ -3,15 +3,15 @@ import numpy as np
 from matplotlib import pyplot as plt
 import math
 
-from fresqcos.src.fresqcos.sources.sources import Attenuated_Laser, Single_Photon_Source, Multiplexed_Heralded_Photon_Source, Symmetric_Multiplexed_Heralded_Photon_Source, Asymmetric_Multiplexed_Heralded_Photon_Source, Entangled_PDC_Source
+from fresqcos.sources.sources import Attenuated_Laser, Single_Photon_Source, Multiplexed_Heralded_Photon_Source, Symmetric_Multiplexed_Heralded_Photon_Source, Asymmetric_Multiplexed_Heralded_Photon_Source, Entangled_PDC_Source
 
-from fresqcos.src.fresqcos.detectors.detectors import Threshold_detector
+from fresqcos.detectors.detectors import Threshold_detector
 
-from fresqcos.src.fresqcos.protocols.protocols import BB84, BBM92
+from fresqcos.protocols.protocols import BB84, BBM92
 
-from fresqcos.src.fresqcos.receiver import Receiver
+from fresqcos.receiver import Receiver
 
-from fresqcos.src.fresqcos.channel import Channel
+from fresqcos.channel import Channel
 
 ## Functions
 
