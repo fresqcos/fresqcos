@@ -254,29 +254,17 @@ class Channel(ABC):
 class FiberChannel(Channel):
     """A fiber optic communication channel."""
 
-    def __init__(self, distance_km: float, loss_per_km: float):
+    def __init__(self, loss_per_km: float, visibility: float):
         """Initialize the fiber channel with the given parameters.
 
         Parameters
         ----------
-        distance_km : float
-            Length of the fiber in kilometers.
         loss_per_km : float
             Attenuation coefficient in dB/km.
+        Visibility : float
         """
-        self.distance_km = distance_km
         self.loss_per_km = loss_per_km
-
-    @property
-    def distance_km(self) -> float:
-        """Return the length of the fiber channel in km. Must be positive."""
-        return self._distance_km
-
-    @distance_km.setter
-    def distance_km(self, value: float) -> None:
-        if value <= 0:
-            raise ValueError(f"distance_km must be positive, got {value}")
-        self._distance_km = value
+        self.visibility = visibility
 
     @property
     def loss_per_km(self) -> float:
@@ -289,9 +277,17 @@ class FiberChannel(Channel):
             raise ValueError(f"loss_per_km must be positive, got {value}")
         self._loss_per_km = value
 
-    def compute_channel_losses(self) -> float:
+    def compute_channel_losses(self, distance_km) -> float:
         """Return the total losses of the fiber channel in dB."""
-        return self.distance_km * self.loss_per_km
+        if distance_km< 0:
+            raise ValueError(f"distance_km must be positive, got {value}")
+        return distance_km * self.loss_per_km
+
+    def transmittance(self, distance_km):
+        return 10**(-self.compute_channel_losses(distance_km)/10)
+
+    def probability_hitting_wrong_detector(self):
+        return (1-self.visibility)/2
 
 
 class FreeSpaceChannel(Channel):
