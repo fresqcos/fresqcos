@@ -20,6 +20,10 @@ def binary_shannon_entropy(x):
         return 0
     return -x*math.log2(x)-(1-x)*math.log2(1-x)
 
+def no_x_event_i_time(x,i):
+
+    return (1-x)**i
+
 ## Protocols
 
 class Protocol(ABC):
