@@ -187,3 +187,45 @@ FiberChannel_4 = FiberChannel(loss_per_km=0.21, distance_km=0, detection_error=0
 f_4 = 1.22
 
 key_rate_loss_pulsed_bbm92(min=0, max=170, values_number=300, source=source_4, detector1=detector_4, detector2=detector_4, channel_1=FiberChannel_4, receiver1=receiver_4, receiver2=receiver_4, correction_efficiency=f_4, title="Evolution of the key rate with the loss for an entangled PDC source")
+
+# Test 6
+## Testing BBM92 continuous, Voigt profile
+
+def g2_source_6(x):
+    return voigt_profile(x, 123.2*10**(-12), 99.3*10**(-12))
+
+source_6 = Continuous_Wave_Pumped_Source(brightness=1646*(10**5), g2_profile= g2_source_6, optical_losses = 4.5)
+
+detector_6 = Threshold_detector(dark_count_rate=350, efficiency=0.76, time_window=310*10**(-12), after_pulsing=0)
+
+channel_6 = FiberChannel(loss_per_km=0.1, distance_km=0, detection_error=0.005)
+
+receiver_6 = Receiver(transmittance=1, x_basis_loss = 6, z_basis_loss = 3)
+
+f_6 = 1.2
+
+#graph_proba(0,3,source_6, "Spiral resonator source statistic")
+
+#print(source_6.coincidence_window_efficiency(310*10**(-12)))
+
+key_rate_loss_bbm92_continuous(min=0, max=275, values_number=300, source=source_6, detector1=detector_6, channel_1=channel_6, channel_2 = channel_6, receiver1=receiver_6, correction_efficiency=f_6, title="Key rate evolution with the loss in dB",coincidence_time =310*10**(-12))
+
+# Test 7
+## Testing BBM92 continuous, Gaussian profile
+
+
+def g2_source_7(t):
+    t_delta = 10**(-10)
+    return (2.0 / t_delta) * np.sqrt(np.log(2.0) / np.pi)*np.exp(-4.0 * np.log(2.0) * (t ** 2) / (t_delta**2))
+
+source_7 = Continuous_Wave_Pumped_Source(brightness=0.05*(10**9), g2_profile = g2_source_7)
+
+detector_7 = Threshold_detector(dark_count_rate=250, efficiency=0.76, time_window=46*10**(-12), after_pulsing=0)
+
+channel_7 = FiberChannel(loss_per_km=0.2, distance_km=0, detection_error=0.01)
+
+receiver_7 = Receiver(transmittance=1)
+
+f_7 = 1.2
+
+key_rate_loss_bbm92_continuous(min=0, max=400, values_number=400, source=source_7, detector1=detector_7, channel_1=channel_7, receiver1=receiver_7, correction_efficiency=f_7, title="Key rate evolution with the loss in dB",coincidence_time =46*10**(-12))
