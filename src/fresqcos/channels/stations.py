@@ -95,10 +95,10 @@ class TransmitterStation(Station, Transmitter):
     def __init__(
         self,
         name: str,
-        latitude: float,
-        longitude: float,
-        altitude: float,
         transmitter: Transmitter,
+        latitude: float | None = None,
+        longitude: float | None = None,
+        altitude: float | None = None,
     ) -> None:
         """Initialize the transmitter station with the given parameters.
 
@@ -106,14 +106,14 @@ class TransmitterStation(Station, Transmitter):
         ----------
         name : str
             The name of the station.
-        latitude : float
-            The latitude of the station.
-        longitude : float
-            The longitude of the station.
-        altitude : float
-            The altitude of the station.
         transmitter : Transmitter
             The transmitter hosted by the station.
+        latitude : float
+            The latitude of the station. Default is None.
+        longitude : float
+            The longitude of the station. Default is None.
+        altitude : float
+            The altitude of the station. Default is None.
         """
         super().__init__(name, latitude, longitude, altitude)
         self.transmitter = transmitter
@@ -142,10 +142,10 @@ class ReceiverStation(Station, Receiver):
     def __init__(
         self,
         name: str,
-        latitude: float,
-        longitude: float,
-        altitude: float,
         receiver: Receiver,
+        latitude: float | None = None,
+        longitude: float | None = None,
+        altitude: float | None = None,
     ) -> None:
         """Initialize the receiver station with the given parameters.
 
@@ -153,14 +153,14 @@ class ReceiverStation(Station, Receiver):
         ----------
         name : str
             The name of the station.
-        latitude : float
-            The latitude of the station.
-        longitude : float
-            The longitude of the station.
-        altitude : float
-            The altitude of the station.
         receiver : Receiver
             The receiver hosted by the station.
+        latitude : float
+            The latitude of the station. Default is None.
+        longitude : float
+            The longitude of the station. Default is None.
+        altitude : float
+            The altitude of the station. Default is None.
         """
         super().__init__(name, latitude, longitude, altitude)
         self.receiver = receiver
