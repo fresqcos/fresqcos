@@ -854,17 +854,3 @@ class GroundToSatChannel(UplinkChannel):
 
     def compute_channel_losses(self) -> float:
         pass
-
-
-class SatToGroundChannel(DownlinkChannel):
-    """A satellite to ground free-space optical communication channel."""
-
-    def compute_channel_losses(self) -> float:
-        pass
-
-
-class SatToSatChannel(HorizontalChannel):
-    """A satellite to satellite free-space optical communication channel."""
-
-    def compute_channel_losses(self) -> float:
-        pass
