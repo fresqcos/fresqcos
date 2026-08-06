@@ -117,9 +117,9 @@ if __name__ == "__main__":
 
     tx_station = TransmitterStation(
         name="Satellite",
-        latitude=0,
-        longitude=0,
-        altitude=0,
+        latitude_deg=0,
+        longitude_deg=0,
+        altitude_km=0,
         transmitter=tx_telescope,
     )
 
@@ -152,7 +152,7 @@ if __name__ == "__main__":
 
     for i in range(len(altitude_vector)):
 
-        free_space_channel.transmitter_station.altitude = altitude_vector[i]
+        free_space_channel.transmitter_station.altitude_km = altitude_vector[i]
     
         rytov_variance_general_plane = free_space_channel.compute_rytov_variance(
             link_type="downlink", 

@@ -1,17 +1,20 @@
 """Module defining classes for stations or platforms in a free-space optical
 communication system."""
 
-from abc import ABC
 from fresqcos.telescopes import Transmitter
 from fresqcos.telescopes import Receiver
 
 
-class Station(ABC):
-    """Abstract base class representing a station/platform in a free-space optical
+class Station:
+    """Class representing a station/platform in a free-space optical
     communication system."""
 
     def __init__(
-        self, name: str, latitude: float, longitude: float, altitude: float
+        self,
+        name: str,
+        altitude_km: float,
+        latitude_deg: float | None = None,
+        longitude_deg: float | None = None,
     ) -> None:
         """Initialize the station with the given parameters.
 
@@ -19,17 +22,17 @@ class Station(ABC):
         ----------
         name : str
             The name of the station.
-        latitude : float
-            The latitude of the station.
-        longitude : float
-            The longitude of the station.
-        altitude : float
-            The altitude of the station.
+        altitude_km : float
+            The altitude of the station in kilometers.
+        latitude_deg : float
+            The latitude of the station in degrees. Default is None.
+        longitude_deg : float
+            The longitude of the station in degrees. Default is None.
         """
         self.name = name
-        self.latitude = latitude
-        self.longitude = longitude
-        self.altitude = altitude
+        self.altitude_km = altitude_km
+        self.latitude_deg = latitude_deg
+        self.longitude_deg = longitude_deg
 
     @property
     def name(self) -> str:
@@ -46,49 +49,54 @@ class Station(ABC):
         self._name = value
 
     @property
-    def latitude(self) -> float:
-        """Return the latitude of the station.
-
-        Must be in [-90, 90].
-        """
-        return self._latitude
-
-    @latitude.setter
-    def latitude(self, value: float) -> None:
-        if not -90 <= value <= 90:
-            raise ValueError(f"latitude must be in [-90, 90], got {value}")
-        self._latitude = value
-
-    @property
-    def longitude(self) -> float:
-        """Return the longitude of the station.
-
-        Must be in [-180, 180].
-        """
-        return self._longitude
-
-    @longitude.setter
-    def longitude(self, value: float) -> None:
-        if not -180 <= value <= 180:
-            raise ValueError(f"longitude must be in [-180, 180], got {value}")
-        self._longitude = value
-
-    @property
-    def altitude(self) -> float:
-        """Return the altitude of the station in meters.
+    def altitude_km(self) -> float:
+        """Return the altitude of the station in kilometers.
 
         Must be non-negative.
         """
-        return self._altitude
+        return self._altitude_km
 
-    @altitude.setter
-    def altitude(self, value: float) -> None:
+    @property
+    def altitude_m(self) -> float:
+        """Return the altitude of the station in meters."""
+        return self._altitude_km * 1e3
+
+    @altitude_km.setter
+    def altitude_km(self, value: float) -> None:
         if value < 0:
             raise ValueError(f"altitude must be non-negative, got {value}")
-        self._altitude = value
+        self._altitude_km = value
+
+    @property
+    def latitude_deg(self) -> float | None:
+        """Return the latitude of the station in degrees.
+
+        Must be in [-90, 90].
+        """
+        return self._latitude_deg
+
+    @latitude_deg.setter
+    def latitude_deg(self, value: float | None) -> None:
+        if value is not None and not -90 <= value <= 90:
+            raise ValueError(f"latitude must be in [-90, 90], got {value}")
+        self._latitude_deg = value
+
+    @property
+    def longitude_deg(self) -> float | None:
+        """Return the longitude of the station in degrees.
+
+        Must be in [-180, 180].
+        """
+        return self._longitude_deg
+
+    @longitude_deg.setter
+    def longitude_deg(self, value: float | None) -> None:
+        if value is not None and not -180 <= value <= 180:
+            raise ValueError(f"longitude must be in [-180, 180], got {value}")
+        self._longitude_deg = value
 
 
-class TransmitterStation(Station, Transmitter):
+class TransmitterStation(Station):
     """Class representing a station hosting a transmitter in a free-space optical
     communication system."""
 
@@ -96,9 +104,9 @@ class TransmitterStation(Station, Transmitter):
         self,
         name: str,
         transmitter: Transmitter,
-        latitude: float | None = None,
-        longitude: float | None = None,
-        altitude: float | None = None,
+        altitude_km: float,
+        latitude_deg: float | None = None,
+        longitude_deg: float | None = None,
     ) -> None:
         """Initialize the transmitter station with the given parameters.
 
@@ -108,14 +116,14 @@ class TransmitterStation(Station, Transmitter):
             The name of the station.
         transmitter : Transmitter
             The transmitter hosted by the station.
-        latitude : float
-            The latitude of the station. Default is None.
-        longitude : float
-            The longitude of the station. Default is None.
-        altitude : float
-            The altitude of the station. Default is None.
+        altitude_km : float
+            The altitude of the station in kilometers.
+        latitude_deg : float
+            The latitude of the station in degrees. Default is None.
+        longitude_deg : float
+            The longitude of the station in degrees. Default is None.
         """
-        super().__init__(name, latitude, longitude, altitude)
+        super().__init__(name, altitude_km, latitude_deg, longitude_deg)
         self.transmitter = transmitter
 
     @property
@@ -129,13 +137,13 @@ class TransmitterStation(Station, Transmitter):
     @transmitter.setter
     def transmitter(self, value: Transmitter) -> None:
         if not isinstance(value, Transmitter):
-            raise ValueError(
+            raise TypeError(
                 f"transmitter must be an instance of Transmitter, got {type(value)}"
             )
         self._transmitter = value
 
 
-class ReceiverStation(Station, Receiver):
+class ReceiverStation(Station):
     """Class representing a station hosting a receiver in a free-space optical
     communication system."""
 
@@ -143,9 +151,9 @@ class ReceiverStation(Station, Receiver):
         self,
         name: str,
         receiver: Receiver,
-        latitude: float | None = None,
-        longitude: float | None = None,
-        altitude: float | None = None,
+        altitude_km: float,
+        latitude_deg: float | None = None,
+        longitude_deg: float | None = None,
     ) -> None:
         """Initialize the receiver station with the given parameters.
 
@@ -155,14 +163,14 @@ class ReceiverStation(Station, Receiver):
             The name of the station.
         receiver : Receiver
             The receiver hosted by the station.
-        latitude : float
-            The latitude of the station. Default is None.
-        longitude : float
-            The longitude of the station. Default is None.
-        altitude : float
-            The altitude of the station. Default is None.
+        latitude_deg : float
+            The latitude of the station in degrees. Default is None.
+        longitude_deg : float
+            The longitude of the station in degrees. Default is None.
+        altitude_km : float
+            The altitude of the station in kilometers. Default is None.
         """
-        super().__init__(name, latitude, longitude, altitude)
+        super().__init__(name, altitude_km, latitude_deg, longitude_deg)
         self.receiver = receiver
 
     @property
@@ -176,7 +184,7 @@ class ReceiverStation(Station, Receiver):
     @receiver.setter
     def receiver(self, value: Receiver) -> None:
         if not isinstance(value, Receiver):
-            raise ValueError(
+            raise TypeError(
                 f"receiver must be an instance of Receiver, got {type(value)}"
             )
         self._receiver = value
