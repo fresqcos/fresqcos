@@ -1,7 +1,6 @@
 """Module for modeling atmospheric effects on free-space optical communication
 channels."""
 
-from abc import ABC
 import numpy as np
 from numpy.typing import NDArray
 from typing import Callable, Union
@@ -11,8 +10,8 @@ IntArray = NDArray[np.int_]
 FloatArray = NDArray[np.float64]
 
 
-class Atmosphere(ABC):
-    """Abstract base class representing the atmospheric effects on a free-space optical
+class Atmosphere:
+    """Class representing the atmospheric effects on a free-space optical
     communication channel."""
 
     def __init__(
@@ -43,8 +42,8 @@ class Atmosphere(ABC):
         self.visibility = visibility
 
     @property
-    def cn2_profile(self) -> Callable:
-        """Return the Cn2 profile as a callable function."""
+    def cn2_profile(self) -> Callable | float:
+        """Return the Cn2 profile as a callable function or constant value."""
         return self._cn2_profile
 
     @cn2_profile.setter
@@ -53,7 +52,7 @@ class Atmosphere(ABC):
 
         If value is callable, it is used directly.
         If value is a numpy array, it is interpolated.
-        If value is a single number, it is treated as a constant Cn2 profile.
+        If value is a single number, it used directly.
         """
         if callable(value):
             self._cn2_profile = value
@@ -64,11 +63,7 @@ class Atmosphere(ABC):
             if cn2_value < 0:
                 raise ValueError(f"cn2_profile must be non-negative, got {cn2_value}")
 
-            self._cn2_profile = lambda h: np.full_like(
-                np.asarray(h, dtype=float),
-                cn2_value,
-                dtype=float,
-            )
+            self._cn2_profile = cn2_value
 
         elif isinstance(value, np.ndarray):
             if self._cn2_altitudes is None:

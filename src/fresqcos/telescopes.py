@@ -1,11 +1,9 @@
 """Module containing classed related to the telescopes of a free-space optical
 communication system."""
 
-from abc import ABC
 
-
-class Telescope(ABC):
-    """Abstract base class representing a telescope in a free-space optical
+class Telescope:
+    """Class representing a telescope in a free-space optical
     communication system."""
 
     def __init__(
@@ -73,7 +71,7 @@ class Telescope(ABC):
 
 
 class Transmitter(Telescope):
-    """Abstract base class representing the transmitter telescope of a free-space
+    """Class representing the transmitter telescope of a free-space
     optical communication system."""
 
     def __init__(
@@ -137,7 +135,7 @@ class Transmitter(Telescope):
 
 
 class Receiver(Telescope):
-    """Abstract base class representing the receiver telescope of a free-space optical
+    """Class representing the receiver telescope of a free-space optical
     communication system."""
 
     def __init__(

@@ -9,10 +9,12 @@ from fresqcos.channels.geometry import (
     compute_sec,
     zenith_angle_from_coordinates,
     slant_range_from_zenith_angle,
+    compute_minimum_alt,
 )
 from fresqcos.channels.atmosphere import Atmosphere
 from scipy.integrate import quad
 import numpy as np
+from numbers import Real
 
 
 class LinkType(str, Enum):
@@ -419,6 +421,11 @@ class SlantChannel(FreeSpaceChannel, ABC):
         """
         super().__init__(transmitter_station, receiver_station, atmospheric_channel)
         self.zenith_angle_deg = zenith_angle_deg
+        if isinstance(atmospheric_channel.cn2_profile, Real):
+            raise ValueError(
+                "For slant channels, cn2_profile must be a callable function, "
+                "not a single number."
+            )
 
     @property
     def link_type(self) -> LinkType:
@@ -714,6 +721,10 @@ class HorizontalChannel(FreeSpaceChannel, ABC):
         """
         super().__init__(transmitter_station, receiver_station, atmospheric_channel)
         self.length_km = length_km
+        if transmitter_station.altitude_km != receiver_station.altitude_km:
+            raise ValueError(
+                "HorizontalChannel requires the transmitter to be at the same altitude as the receiver"
+            )
 
     @property
     def length_km(self) -> float:
@@ -734,6 +745,20 @@ class HorizontalChannel(FreeSpaceChannel, ABC):
         if value is not None and value <= 0:
             raise ValueError(f"length_km must be positive, got {value}")
         self._length_km = value
+
+    @property
+    def cn2(self) -> float:
+        """Return the Cn2 value used for the horizontal channel."""
+        profile = self.atmospheric_channel.cn2_profile
+
+        if callable(profile):
+            h_min = compute_minimum_alt(
+                self.length_km,
+                self.transmitter_station.altitude_km,
+            )
+            return float(profile(h_min))
+
+        return float(profile)
 
     @property
     def channel_length_m(self) -> float:
@@ -770,12 +795,7 @@ class HorizontalChannel(FreeSpaceChannel, ABC):
             radius_of_curvature_in,
         )
 
-        rytov_var_plane = (
-            1.23
-            * self.atmospheric_channel.cn2_profile
-            * k ** (7 / 6)
-            * length ** (11 / 6)
-        )
+        rytov_var_plane = 1.23 * self.cn2 * k ** (7 / 6) * length ** (11 / 6)
         rytov_var = (
             3.86
             * rytov_var_plane
@@ -818,9 +838,7 @@ class HorizontalChannel(FreeSpaceChannel, ABC):
         if length == 0:
             coherence_width = np.inf
         else:
-            coherence_width_plane = (
-                0.423 * k**2 * self.atmospheric_channel.cn2_profile * length
-            ) ** (-3 / 5)
+            coherence_width_plane = (0.423 * k**2 * self.cn2 * length) ** (-3 / 5)
             alpha = (
                 (1 - theta_out ** (8 / 3)) / (1 - theta_out)
                 if theta_out >= 0
@@ -865,11 +883,7 @@ class HorizontalChannel(FreeSpaceChannel, ABC):
         ) ** (1 / 6)
         integral = quad(integrand, 0, 1)[0]
         wandering_variance = (
-            7.25
-            * self.atmospheric_channel.cn2_profile
-            * length**3
-            * tx_waist ** (-1 / 3)
-            * integral
+            7.25 * self.cn2 * length**3 * tx_waist ** (-1 / 3) * integral
         )
 
         return wandering_variance
@@ -901,7 +915,7 @@ class DownlinkChannel(SlantChannel, ABC):
         )
         if self.link_type is not LinkType.DOWNLINK:
             raise ValueError(
-                "DownlinkChannel requires the transmitter " "to be above the receiver"
+                "DownlinkChannel requires the transmitter to be above the receiver"
             )
 
     @abstractmethod
@@ -943,7 +957,7 @@ class UplinkChannel(SlantChannel, ABC):
         )
         if self.link_type is not LinkType.UPLINK:
             raise ValueError(
-                "UplinkChannel requires the transmitter " "to be below the receiver"
+                "UplinkChannel requires the transmitter to be below the receiver"
             )
 
     @abstractmethod
