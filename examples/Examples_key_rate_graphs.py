@@ -3,11 +3,11 @@
 from matplotlib import pyplot as plt
 import numpy as np
 
-from fresqcos.sources.sources import Attenuated_Laser, Single_Photon_Source, Multiplexed_Heralded_Photon_Source, Symmetric_Multiplexed_Heralded_Photon_Source, Asymmetric_Multiplexed_Heralded_Photon_Source, Entangled_PDC_Source
+from fresqcos.sources.sources import Attenuated_Laser, Single_Photon_Source, Multiplexed_Heralded_Photon_Source, Symmetric_Multiplexed_Heralded_Photon_Source, Asymmetric_Multiplexed_Heralded_Photon_Source, Entangled_PDC_Source, Continuous_Wave_Pumped_Source, Sagnac_Sources
 
 from fresqcos.detectors.detectors import Threshold_detector
 
-from fresqcos.protocols.protocols import BB84, BBM92
+from fresqcos.protocols.protocols import BB84, Pulsed_BBM92, BBM92_continuous_wave_pumped_source, Continuous_Entanglement_swapping
 
 from fresqcos.receiver import Receiver
 
