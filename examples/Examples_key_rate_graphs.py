@@ -208,6 +208,20 @@ f_4 = 1.22
 
 key_rate_loss_pulsed_bbm92(min=0, max=170, values_number=300, source=source_4, detector1=detector_4, detector2=detector_4, channel_1=FiberChannel_4, receiver1=receiver_4, receiver2=receiver_4, correction_efficiency=f_4, title="Evolution of the key rate with the loss for an entangled PDC source")
 
+# Test 5
+## Entanglement swapping with Sagnac Source
+
+source_5 = Sagnac_Sources(mean_photon_number = 0.48, repetition_rate=0)
+
+detector_5 = Threshold_detector(dark_count_rate=10**(5), efficiency=0.7, time_window=10**(-10), after_pulsing=0)
+
+channel_5 = FiberChannel(loss_per_km=0.2, distance_km=150, detection_error=0.01)
+
+receiver_5 = Receiver(transmittance=1)
+
+visibility_mean_photon_number(min=0, max=0.2, values_number=50, bell_measurement_number = 3, source_1=source_5, channel_1=channel_5, detector_1=detector_5, receiver_1=receiver_5, title = "Evolution of the visibility with the mean photon number for 3 Bell measurement")
+
+
 # Test 6
 ## Testing BBM92 continuous, Voigt profile
 
