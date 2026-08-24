@@ -128,6 +128,26 @@ def key_rate_loss_bbm92_continuous(*, min, max, values_number, source: Source, d
     plt.grid(True)
     plt.show()
 
+def visibility_mean_photon_number(*,min, max, values_number, bell_measurement_number: int, source_1: Source, channel_1: FiberChannel, detector_1: Detector, receiver_1: Receiver, title: str):
+
+    x_values = np.linspace(min, max, values_number)
+    y_values = []
+
+    for x in x_values:
+
+        source_1.mean_photon_number = x
+        entanglement_swapping = Continuous_Entanglement_swapping(bell_measurement_number = bell_measurement_number, source_1 = source_1, channel_1 = channel_1, detector_1 = detector_1, receiver_1 = receiver_1)
+
+        visibility = entanglement_swapping.visibility()
+
+        y_values.append(visibility)
+
+    plt.plot(x_values, y_values)
+    plt.xlabel("Mean photon number")
+    plt.ylabel("Visibility")
+    plt.title(title)
+    plt.grid(True)
+    plt.show()
 
 # Test 1:
 
