@@ -2,6 +2,10 @@ from abc import ABC, abstractmethod
 import numpy as np
 from matplotlib import pyplot as plt
 import math
+import scipy
+from mpmath import mp
+
+mp.dps = 80
 
 from fresqcos.sources.sources import Attenuated_Laser, Single_Photon_Source, Multiplexed_Heralded_Photon_Source, Symmetric_Multiplexed_Heralded_Photon_Source, Asymmetric_Multiplexed_Heralded_Photon_Source, Entangled_PDC_Source
 
@@ -382,3 +386,134 @@ class BBM92_continuous_wave_pumped_source(Protocol):
 
     def key_rate(self):
         return (self.overall_measured_coincidence()/2)*(1-binary_shannon_entropy(self.qber_x())-self.correction_efficiency*binary_shannon_entropy(self.qber_z()))
+
+## Entanglement swapping using covariance matrix
+
+class Continuous_Entanglement_swapping(Protocol):
+
+    def __init__(self,*, bell_measurement_number: int, source_1: Source, channel_1: FiberChannel, detector_1: Detector, receiver_1: Receiver):
+
+        self.bell_measurement_number = bell_measurement_number
+        self.source_1 = source_1
+        self.channel_1 = channel_1
+        self.detector_1 = detector_1
+        self.receiver_1 = receiver_1
+
+        self.covariance_matrix = self.source_1.emitted_pairs_covariance_matrix(bell_measurement_number+1)
+
+        self.beam_splitter_matrix = self.beam_splitter_matrix(1/2)
+
+        self.losses_matrix = self.losses_matrix()
+
+        self.beam_splitter_entanglement = self.beam_splitter_entanglement()
+
+    def beam_splitter_matrix(self, t):
+
+        A = np.sqrt(np.clip(t, 0.0, 1.0))*np.eye(2)
+        B = np.sqrt(np.clip(1-t, 0.0, 1.0))*np.eye(2)
+
+        partial_matrix = np.block([[A,B],[-B,A]])
+
+        return np.kron(np.eye(2), scipy.linalg.block_diag(np.eye(2),np.kron(np.eye(self.bell_measurement_number),partial_matrix),np.eye(2)))
+
+    def beam_splitter_entanglement(self):
+
+        return np.dot(self.beam_splitter_matrix.T, np.dot(self.covariance_matrix, self.beam_splitter_matrix))
+
+    def polarizers_matrix(self, polarizer_angle_1, polarizer_angle_2):
+        a_1 = np.cos(polarizer_angle_1)
+        a_2 = np.sin(polarizer_angle_1)
+
+        A = np.array([[a_1,a_2],
+                    [-a_2,a_1]])
+
+        b_1 = np.cos(polarizer_angle_2)
+        b_2 = np.sin(polarizer_angle_2)
+
+        B = np.array([[b_1,b_2],
+                    [-b_2,b_1]])
+
+        return np.kron(np.eye(2), scipy.linalg.block_diag(A, np.eye(4*self.bell_measurement_number),B))
+
+
+    def apply_polarizer(self, polarizer_angle_1, polarizer_angle_2):
+
+        pol_matrix = self.polarizers_matrix(polarizer_angle_1, polarizer_angle_2)
+
+        return np.dot(pol_matrix.T, np.dot(self.beam_splitter_entanglement, pol_matrix))
+
+
+    def losses_matrix(self):
+
+        n = self.source_1.optical_efficiency()*self.detector_1.efficiency*self.channel_1.transmittance()*self.receiver_1.transmittance*self.receiver_1.x_basis_transmittance()
+
+        return n*np.eye(8*(self.bell_measurement_number+1))
+
+    def apply_losses_matrix(self, polarizer_angle_1, polarizer_angle_2):
+
+        K = np.sqrt(self.losses_matrix)
+        A = np.eye(8*(self.bell_measurement_number+1))-self.losses_matrix
+
+        return np.dot(K.T, np.dot(self.apply_polarizer(polarizer_angle_1, polarizer_angle_2), K))+A
+
+    def overall_coincidence_probability(self, polarizer_angle_1, polarizer_angle_2):
+        n = self.bell_measurement_number
+
+        M = self.apply_losses_matrix(polarizer_angle_1, polarizer_angle_2)
+
+        M_mp = mp.matrix(M.tolist())
+
+        probability = mp.mpf(0.0)
+
+        measured_lines = [0]
+
+        for i in range(n):
+
+            measured_lines.append(2+4*i)
+            measured_lines.append(5+4*i)
+
+        measured_lines.append(4*n+2)
+
+        for k in range(0,2*(n+1)+1):
+
+            combinations = its.combinations(measured_lines, k)
+            partial_sum = mp.mpf(0.0)
+
+            back_ground_rate = mp.mpf(self.detector_1.background_rate())
+
+            dark_count_factor = (mp.mpf(-2.0) *(mp.mpf(1.0)-back_ground_rate))** k
+
+            for X in combinations:
+
+                if k == 0:
+                    partial_sum = partial_sum + mp.mpf(1.0)
+                    continue
+
+                P = tuple(y + 4*(n+1) for y in X)
+
+                sub_x = mp.matrix([[M_mp[r, c] for c in X] for r in X])
+                sub_p = mp.matrix([[M_mp[r, c] for c in P] for r in P])
+
+                for d in range(k):
+                    sub_x[d, d] += mp.mpf(1.0)
+                    sub_p[d, d] += mp.mpf(1.0)
+
+                det_val = mp.det(sub_x) * mp.det(sub_p)
+
+                partial_sum = partial_sum + mp.mpf(1.0)/mp.sqrt(det_val)
+
+            probability = probability + dark_count_factor*partial_sum
+
+        return probability
+
+
+    def visibility(self):
+
+        p_max = self.overall_coincidence_probability(0,np.pi/2)
+        p_min = self.overall_coincidence_probability(0,0)
+
+        if (p_max+p_min)<=0:
+            return 0
+
+        v = (p_max-p_min)/(p_max+p_min)
+        return v
