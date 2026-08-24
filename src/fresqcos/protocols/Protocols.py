@@ -28,14 +28,13 @@ def no_x_event_i_time(x,i):
 
 class Protocol(ABC):
 
-    def __init__(self, source: Source, detector: Detector, channel: Channel, receiver: Receiver, correction_efficiency: float, distance_km: float):
+    def __init__(self, source: Source, detector: Detector, channel: Channel, receiver: Receiver, correction_efficiency: float):
 
         self.source = source
         self.detector = detector
         self.channel = channel
         self.receiver = receiver
         self.correction_efficiency = correction_efficiency
-        self.distance_km = distance_km
 
 class BB84(Protocol):
 
