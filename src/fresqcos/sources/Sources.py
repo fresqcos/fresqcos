@@ -3,6 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import math
 from scipy.stats import poisson
+import scipy
 
 class Source(ABC):
     def __init__(self, repetition_rate: float):
@@ -460,3 +461,68 @@ class Continuous_Wave_Pumped_Source(Source):
 
     def optical_efficiency(self):
         return 10**(-self.optical_losses/10)
+
+## Entanglement swapping sources
+
+class Sagnac_Sources(Source):
+
+    def __init__(self,*, mean_photon_number: float, optical_losses: Optional[float] = None):
+
+        self.mean_photon_number = mean_photon_number
+
+        if optical_losses is None:
+            self.optical_losses = 0
+        else:
+            self.optical_losses = optical_losses
+
+    @property
+    def mean_photon_number(self) -> float:
+        """ Return the mean photon number per pulse.
+
+        Must be non-negative
+        """
+        return self._mean_photon_number
+
+    @mean_photon_number.setter
+    def mean_photon_number(self, value: float) -> None:
+        if value < 0:
+            raise ValueError(f"mean_photon_number must be non-negative, got {value}")
+
+        self._mean_photon_number = float(value)
+
+        return ((i+1)*self.brightness_parameter()**i)/(self.brightness_parameter()+1)**(i+2)
+
+    def optical_efficiency(self):
+        return 10**(-self.optical_losses/10)
+
+    def two_modes_squeezed_vacuum_states(self, sources_number):
+        c_1 = 2*self.mean_photon_number+1
+        c_2 = 2*np.sqrt(self.mean_photon_number*(self.mean_photon_number+1))
+
+        partial_x_quadrature_matrix = np.array([[c_1,c_2],
+                                                [c_2,c_1]])
+
+        partial_p_quadrature_matrix = np.array([[c_1,-c_2],
+                                                [-c_2,c_1]])
+
+        x_quadrature = np.kron(np.eye(2),partial_x_quadrature_matrix)
+
+        p_quadrature = np.kron(np.eye(2),partial_p_quadrature_matrix)
+
+        overall_x = np.kron(np.eye(sources_number), x_quadrature)
+
+        overall_p = np.kron(np.eye(sources_number), p_quadrature)
+
+        return scipy.linalg.block_diag(overall_x, overall_p)
+
+    def emitted_pairs_covariance_matrix(self, sources_number):
+
+        partial_swapping_matrix = np.array([[1,0,0,0],
+                                            [0,0,0,1],
+                                            [0,0,1,0],
+                                            [0,1,0,0]])
+
+        swapping_matrix = np.kron(np.eye(2*sources_number), partial_swapping_matrix)
+
+        return np.dot(swapping_matrix.T, np.dot(self.two_modes_squeezed_vacuum_states(sources_number),swapping_matrix))
+
