@@ -6,33 +6,7 @@ from scipy.stats import poisson
 import scipy
 
 class Source(ABC):
-    def __init__(self, repetition_rate: float):
-
-        self.repetition_rate = repetition_rate
-
-
-    @property
-    def repetition_rate(self) -> float:
-        """ Return the pulse number per second.
-
-        Must be non-negative
-        """
-        return self._repetition_rate
-
-    @repetition_rate.setter
-    def repetition_rate(self, value: float) -> None:
-        if value < 0:
-            raise ValueError(f"repetition_rate must be non-negative, got {value}")
-
-        self._repetition_rate = float(value)
-
-
-    @abstractmethod
-
-    def probability_sending_i_state(self,i) -> float:
-        """ Probability of sending an i-photon state """
-
-
+    pass
 ## Pulsed sources
 
 
