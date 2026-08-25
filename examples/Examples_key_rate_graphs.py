@@ -211,7 +211,7 @@ key_rate_loss_pulsed_bbm92(min=0, max=170, values_number=300, source=source_4, d
 # Test 5
 ## Entanglement swapping with Sagnac Source
 
-source_5 = Sagnac_Sources(mean_photon_number = 0.48, repetition_rate=0)
+source_5 = Sagnac_Sources(mean_photon_number = 0.48)
 
 detector_5 = Threshold_detector(dark_count_rate=10**(5), efficiency=0.7, time_window=10**(-10), after_pulsing=0)
 
