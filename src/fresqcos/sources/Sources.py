@@ -464,8 +464,6 @@ class Sagnac_Sources(Source):
 
         self._mean_photon_number = float(value)
 
-        return ((i+1)*self.brightness_parameter()**i)/(self.brightness_parameter()+1)**(i+2)
-
     def optical_efficiency(self):
         return 10**(-self.optical_losses/10)
 
