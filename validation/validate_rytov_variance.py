@@ -4,7 +4,7 @@ from fresqcos.telescopes import Transmitter, Receiver
 from fresqcos.channels.stations import TransmitterStation, ReceiverStation
 from fresqcos.channels.atmosphere import Atmosphere
 from fresqcos.channels.cn2 import hufnagel_valley
-from fresqcos.channels.channels import FreeSpaceChannel
+from fresqcos.channels.channels import DownlinkChannel, SatToGroundChannel
 from fresqcos.channels.geometry import compute_sec
 from functools import partial
 import numpy as np
@@ -12,19 +12,19 @@ from scipy.integrate import quad
 import matplotlib.pyplot as plt
 import matplotlib
 
-matplotlib.rcParams['mathtext.fontset'] = 'cm'
-matplotlib.rcParams['font.family'] = 'STIXGeneral'
-matplotlib.rcParams['font.size'] = 14
+matplotlib.rcParams["mathtext.fontset"] = "cm"
+matplotlib.rcParams["font.family"] = "STIXGeneral"
+matplotlib.rcParams["font.size"] = 14
 
 
-def rytov_variance_plane_downlink(channel: FreeSpaceChannel) -> float:
-    """Compute rytov variance of a plane wave for a 
+def rytov_variance_plane_downlink(channel: DownlinkChannel) -> float:
+    """Compute rytov variance of a plane wave for a
     downlink channel [Andrews/Phillips, 2005, from Eqs 12.92 and 12.37].
 
     Parameters
     ----------
-    channel : FreeSpaceChannel
-        Free space channel object.
+    channel : DownlinkChannel
+        Downlink channel object.
 
     Returns
     -------
@@ -50,14 +50,14 @@ def rytov_variance_plane_downlink(channel: FreeSpaceChannel) -> float:
     return rytov_var
 
 
-def rytov_variance_spherical_downlink(channel: FreeSpaceChannel) -> float:
-    """Compute rytov variance of a spherical wave for a 
+def rytov_variance_spherical_downlink(channel: DownlinkChannel) -> float:
+    """Compute rytov variance of a spherical wave for a
     downlink channel [Andrews/Phillips, 2005, from Eqs 12.92 and 12.37].
 
     Parameters
     ----------
-    channel : FreeSpaceChannel
-        Free space channel object.
+    channel : DownlinkChannel
+        Downlink channel object.
 
     Returns
     -------
@@ -99,7 +99,7 @@ if __name__ == "__main__":
     wind_rms = 10
     reference_cn2 = 1.7e-14
     altitude_vector = np.linspace(5, platform_altitude, 50)
-    
+
     tx_telescope = Transmitter(
         wavelength=wvln,
         waist_radius=tx_waist_radius,
@@ -117,27 +117,25 @@ if __name__ == "__main__":
 
     tx_station = TransmitterStation(
         name="Satellite",
-        latitude_deg=0,
-        longitude_deg=0,
-        altitude_km=0,
         transmitter=tx_telescope,
+        altitude_km=altitude_vector[0],
     )
 
     rx_station = ReceiverStation(
         name="Ground Station",
-        latitude=0,
-        longitude=0,
-        altitude=gs_altitude,
         receiver=rx_telescope,
+        altitude_km=gs_altitude,
     )
 
     atmosphere = Atmosphere(
-        cn2_profile=partial(hufnagel_valley, wind_speed_rms=wind_rms, reference_ground=reference_cn2),
+        cn2_profile=partial(
+            hufnagel_valley, wind_speed_rms=wind_rms, reference_ground=reference_cn2
+        ),
         wind_speed=wind_rms,
         visibility=10,
     )
 
-    free_space_channel = FreeSpaceChannel(
+    downlink_channel = SatToGroundChannel(
         transmitter_station=tx_station,
         receiver_station=rx_station,
         atmospheric_channel=atmosphere,
@@ -152,33 +150,51 @@ if __name__ == "__main__":
 
     for i in range(len(altitude_vector)):
 
-        free_space_channel.transmitter_station.altitude_km = altitude_vector[i]
-    
-        rytov_variance_general_plane = free_space_channel.compute_rytov_variance(
-            link_type="downlink", 
-            wave_type="plane")
-        rytov_variance_general_spherical = free_space_channel.compute_rytov_variance(
-            link_type="downlink", 
-            wave_type="spherical")
-        rytov_variance_general_gaussian = free_space_channel.compute_rytov_variance(
-            link_type="downlink", 
-            wave_type="gaussian")
-        rytov_variance_plane = rytov_variance_plane_downlink(free_space_channel)
-        rytov_variance_spherical = rytov_variance_spherical_downlink(free_space_channel)
+        rytov_variance_general_plane = downlink_channel.compute_rytov_variance(
+            wave_type="plane"
+        )
+        rytov_variance_general_spherical = downlink_channel.compute_rytov_variance(
+            wave_type="spherical"
+        )
+        rytov_variance_general_gaussian = downlink_channel.compute_rytov_variance(
+            wave_type="gaussian"
+        )
+        rytov_variance_plane = rytov_variance_plane_downlink(downlink_channel)
+        rytov_variance_spherical = rytov_variance_spherical_downlink(downlink_channel)
         rytov_variance_general_plane_list.append(rytov_variance_general_plane)
         rytov_variance_general_spherical_list.append(rytov_variance_general_spherical)
         rytov_variance_general_gaussian_list.append(rytov_variance_general_gaussian)
         rytov_variance_plane_list.append(rytov_variance_plane)
         rytov_variance_width_spherical_list.append(rytov_variance_spherical)
 
+        if i < len(altitude_vector) - 1:
+            downlink_channel.transmitter_station.altitude_km = altitude_vector[i + 1]
+
 
 plt.figure()
-plt.plot(altitude_vector, rytov_variance_general_plane_list, label="Plane Wave (General)")
-plt.plot(altitude_vector, rytov_variance_general_spherical_list, label="Spherical Wave (General)")
-plt.plot(altitude_vector, rytov_variance_general_gaussian_list, label="Gaussian Beam (General)")
+plt.plot(
+    altitude_vector, rytov_variance_general_plane_list, label="Plane Wave (General)"
+)
+plt.plot(
+    altitude_vector,
+    rytov_variance_general_spherical_list,
+    label="Spherical Wave (General)",
+)
+plt.plot(
+    altitude_vector,
+    rytov_variance_general_gaussian_list,
+    label="Gaussian Beam (General)",
+)
 plt.gca().set_prop_cycle(None)
-plt.plot(altitude_vector, rytov_variance_plane_list, "o", label="Plane Wave (Reference)")
-plt.plot(altitude_vector, rytov_variance_width_spherical_list, "o", label="Spherical Wave (Reference)")
+plt.plot(
+    altitude_vector, rytov_variance_plane_list, "o", label="Plane Wave (Reference)"
+)
+plt.plot(
+    altitude_vector,
+    rytov_variance_width_spherical_list,
+    "o",
+    label="Spherical Wave (Reference)",
+)
 plt.xlabel("Platform altitude (km)")
 plt.ylabel("Rytov variance")
 plt.title("Rytov variance in Downlink Channel")
