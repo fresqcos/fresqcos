@@ -68,8 +68,8 @@ def input_plane_parameters(
     if np.isinf(waist_radius_in) and np.isinf(radius_of_curvature_in):
         return 1, 0
 
-    # Spherical wave: point source, zero waist or zero radius of curvature
-    if waist_radius_in == 0 or radius_of_curvature_in == 0:
+    # Spherical wave: infinite waist, radius of curvature equal to propagation distance
+    if waist_radius_in == np.inf and radius_of_curvature_in == length:
         return 0, 0
 
     # General Gaussian beam
@@ -114,8 +114,8 @@ def output_plane_parameters(
     if np.isinf(waist_radius_in) and np.isinf(radius_of_curvature_in):
         return 1, 0
 
-    # Spherical wave: point source, zero waist or zero radius of curvature
-    if waist_radius_in == 0 or radius_of_curvature_in == 0:
+    # Spherical wave: infinite waist, radius of curvature equal to propagation distance
+    if waist_radius_in == np.inf and radius_of_curvature_in == length:
         return 0, 0
 
     # General Gaussian beam
@@ -378,7 +378,7 @@ class FreeSpaceChannel(Channel, ABC):
         if wave_type == WaveType.PLANE:
             return np.inf, np.inf
         elif wave_type == WaveType.SPHERICAL:
-            return length, 0
+            return length, np.inf
         elif wave_type == WaveType.GAUSSIAN:
             return np.inf, self.transmitter_station.transmitter.waist_radius
         else:
@@ -509,22 +509,18 @@ class SlantChannel(FreeSpaceChannel, ABC):
     def _normalized_distance_variable(self) -> callable:
         """Calculate the normalized distance variable xi for a given altitude h and link type.
 
-        Parameters
-        ----------
-        link_type : LinkType
-            Geometry of the link: UPLINK or DOWNLINK.
-
         Returns
         -------
         callable
             The normalized distance variable xi as a function of altitude.
         """
-        h_rx = self.receiver_altitude_m
-        h_tx = self.transmitter_altitude_m
+        lower_station, upper_station = self._lower_and_upper_stations()
+        h_lower = lower_station.altitude_m
+        h_upper = upper_station.altitude_m
         if self.link_type == LinkType.DOWNLINK:
-            xi = lambda h: (h - h_rx) / (h_tx - h_rx)
+            xi = lambda h: (h - h_lower) / (h_upper - h_lower)
         else:
-            xi = lambda h: 1 - (h - h_rx) / (h_tx - h_rx)
+            xi = lambda h: 1 - (h - h_lower) / (h_upper - h_lower)
         return xi
 
     @abstractmethod
@@ -614,21 +610,21 @@ class SlantChannel(FreeSpaceChannel, ABC):
 
         xi = self._normalized_distance_variable()
 
-        observer_station, target_station = self._lower_and_upper_stations()
-        observer_alt = observer_station.altitude_m
-        target_alt = target_station.altitude_m
+        lower_station, upper_station = self._lower_and_upper_stations()
+        lower_alt = lower_station.altitude_m
+        upper_alt = upper_station.altitude_m
 
         mu_1 = compute_slant_integral_1(
             self.atmospheric_channel.cn2_profile,
-            observer_alt,
-            target_alt,
+            lower_alt,
+            upper_alt,
             theta_out,
             xi,
         )
         mu_2 = compute_slant_integral_2(
             self.atmospheric_channel.cn2_profile,
-            observer_alt,
-            target_alt,
+            lower_alt,
+            upper_alt,
             xi,
         )
         coherence_width = (
@@ -663,12 +659,15 @@ class SlantChannel(FreeSpaceChannel, ABC):
             radius_of_curvature_in,
         )
         theta_bar_in = 1 - theta_in
+        print(
+            f"theta_in: {theta_in}, lambda_in: {lambda_in}, theta_bar_in: {theta_bar_in}"
+        )
         rytov_var = self.compute_rytov_variance(wave_type)
         tx_waist = self.transmitter_station.transmitter.waist_radius
 
-        observer_station, target_station = self._lower_and_upper_stations()
-        observer_alt = observer_station.altitude_m
-        target_alt = target_station.altitude_m
+        lower_station, upper_station = self._lower_and_upper_stations()
+        lower_alt = lower_station.altitude_m
+        upper_alt = upper_station.altitude_m
 
         xi = self._normalized_distance_variable()
 
@@ -683,9 +682,10 @@ class SlantChannel(FreeSpaceChannel, ABC):
             ** (1 / 6)
             * scale
         )
-        integral = quad(integrand, observer_alt, target_alt)[0]
+        integral = quad(integrand, lower_alt, upper_alt)[0]
         wandering_variance = (
             7.25
+            * (upper_alt - lower_alt) ** 2
             * compute_sec(self.zenith_angle_deg) ** 3
             * tx_waist ** (-1 / 3)
             * integral
@@ -802,7 +802,7 @@ class HorizontalChannel(FreeSpaceChannel, ABC):
             * (
                 0.4
                 * ((1 + 2 * theta_out) ** 2 + 4 * lambda_out**2) ** (5 / 12)
-                * np.cos(5 / 6 * np.arctan((1 + 2 * theta_out) / (2 * lambda_out)))
+                * np.cos(5 / 6 * np.arctan2((1 + 2 * theta_out), (2 * lambda_out)))
                 - 11 / 16 * lambda_out ** (5 / 6)
             )
         )
@@ -996,7 +996,35 @@ class GroundToAerialChannel(UplinkChannel):
 class AerialToAerialChannel(HorizontalChannel):
     """An aerial platform to aerial platform free-space optical communication channel."""
 
+    def __init__(
+        self,
+        transmitter_station: TransmitterStation,
+        receiver_station: ReceiverStation,
+        atmospheric_channel: Atmosphere,
+        length_km: float | None = None,
+    ) -> None:
+        """Initialize the slant free-space channel with the given parameters.
+
+        Parameters
+        ----------
+        transmitter_station : TransmitterStation
+            The station hosting the transmitter.
+        receiver_station : ReceiverStation
+            The station hosting the receiver.
+        atmospheric_channel : Atmosphere
+            The atmospheric effects on the channel.
+        length_km : float, optional
+            The length of the channel in kilometers. If not provided,
+            it will be computed from the station coordinates.
+        """
+        super().__init__(
+            transmitter_station, receiver_station, atmospheric_channel, length_km
+        )
+
     def compute_channel_losses(self) -> float:
+        pass
+
+    def draw_channel_pdf_sample(self) -> float:
         pass
 
 
@@ -1010,12 +1038,62 @@ class SatToSatChannel(HorizontalChannel):
 class SatToGroundChannel(DownlinkChannel):
     """A satellite to ground free-space optical communication channel."""
 
+    def __init__(
+        self,
+        transmitter_station: TransmitterStation,
+        receiver_station: ReceiverStation,
+        atmospheric_channel: Atmosphere,
+        zenith_angle_deg: float | None = None,
+    ) -> None:
+        """Initialize the satellite to ground channel with the given parameters.
+
+        Parameters
+        ----------
+        transmitter_station : TransmitterStation
+            The station hosting the transmitter.
+        receiver_station : ReceiverStation
+            The station hosting the receiver.
+        atmospheric_channel : Atmosphere
+            The atmospheric effects on the channel.
+        """
+        super().__init__(
+            transmitter_station, receiver_station, atmospheric_channel, zenith_angle_deg
+        )
+
     def compute_channel_losses(self) -> float:
+        pass
+
+    def draw_channel_pdf_sample(self) -> float:
         pass
 
 
 class GroundToSatChannel(UplinkChannel):
     """A ground to satellite free-space optical communication channel."""
 
+    def __init__(
+        self,
+        transmitter_station: TransmitterStation,
+        receiver_station: ReceiverStation,
+        atmospheric_channel: Atmosphere,
+        zenith_angle_deg: float | None = None,
+    ) -> None:
+        """Initialize the ground to satellite channel with the given parameters.
+
+        Parameters
+        ----------
+        transmitter_station : TransmitterStation
+            The station hosting the transmitter.
+        receiver_station : ReceiverStation
+            The station hosting the receiver.
+        atmospheric_channel : Atmosphere
+            The atmospheric effects on the channel.
+        """
+        super().__init__(
+            transmitter_station, receiver_station, atmospheric_channel, zenith_angle_deg
+        )
+
     def compute_channel_losses(self) -> float:
+        pass
+
+    def draw_channel_pdf_sample(self) -> float:
         pass
