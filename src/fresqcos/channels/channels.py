@@ -448,6 +448,18 @@ class SlantChannel(FreeSpaceChannel, ABC):
             return self.transmitter_station, self.receiver_station
 
     @property
+    def lower_altitude_m(self) -> float:
+        """Return the altitude of the lower station in meters."""
+        lower_station, _ = self._lower_and_upper_stations()
+        return lower_station.altitude_m
+
+    @property
+    def higher_altitude_m(self) -> float:
+        """Return the altitude of the higher station in meters."""
+        _, upper_station = self._lower_and_upper_stations()
+        return upper_station.altitude_m
+
+    @property
     def zenith_angle_deg(self) -> float:
         """Return the zenith angle of the link in degrees.
         If not provided, it is computed from the station coordinates.
@@ -514,9 +526,8 @@ class SlantChannel(FreeSpaceChannel, ABC):
         callable
             The normalized distance variable xi as a function of altitude.
         """
-        lower_station, upper_station = self._lower_and_upper_stations()
-        h_lower = lower_station.altitude_m
-        h_upper = upper_station.altitude_m
+        h_lower = self.lower_altitude_m
+        h_upper = self.higher_altitude_m
         if self.link_type == LinkType.DOWNLINK:
             xi = lambda h: (h - h_lower) / (h_upper - h_lower)
         else:
@@ -559,15 +570,14 @@ class SlantChannel(FreeSpaceChannel, ABC):
             radius_of_curvature_in,
         )
 
-        observer_station, target_station = self._lower_and_upper_stations()
-        observer_alt = observer_station.altitude_m
-        target_alt = target_station.altitude_m
+        lower_alt = self.lower_altitude_m
+        higher_alt = self.higher_altitude_m
         xi = self._normalized_distance_variable()
 
         integral = compute_slant_integral_3(
             self.atmospheric_channel.cn2_profile,
-            observer_alt,
-            target_alt,
+            lower_alt,
+            higher_alt,
             xi,
             theta_out,
             lambda_out,
@@ -576,7 +586,7 @@ class SlantChannel(FreeSpaceChannel, ABC):
             8.7
             * integral
             * k ** (7 / 6)
-            * (target_alt - observer_alt) ** (5 / 6)
+            * (higher_alt - lower_alt) ** (5 / 6)
             * compute_sec(self.zenith_angle_deg) ** (11 / 6)
         )
 
@@ -610,9 +620,8 @@ class SlantChannel(FreeSpaceChannel, ABC):
 
         xi = self._normalized_distance_variable()
 
-        lower_station, upper_station = self._lower_and_upper_stations()
-        lower_alt = lower_station.altitude_m
-        upper_alt = upper_station.altitude_m
+        lower_alt = self.lower_altitude_m
+        upper_alt = self.higher_altitude_m
 
         mu_1 = compute_slant_integral_1(
             self.atmospheric_channel.cn2_profile,
@@ -629,18 +638,13 @@ class SlantChannel(FreeSpaceChannel, ABC):
         )
         coherence_width = (
             np.cos(self.zenith_angle_rad)
-            / (0.423 * k**2 * (mu_1 + 0.62 * mu_2 * lambda_out ** (11 / 6)))
+            / (0.423 * k**2 * (mu_1 + 0.622 * mu_2 * lambda_out ** (11 / 6)))
         ) ** (3 / 5)
 
         return coherence_width
 
-    def compute_wandering_variance(self, wave_type: WaveType) -> float:
-        """Compute the beam wandering variance for a free-space optical channel.
-
-        Parameters
-        ----------
-        wave_type : WaveType
-            Type of the wave: PLANE, SPHERICAL OR GAUSSIAN.
+    def compute_wandering_variance(self) -> float:
+        """Compute the beam wandering variance of a Gaussian beam in a slant free-space channel.
 
         Returns
         -------
@@ -648,7 +652,7 @@ class SlantChannel(FreeSpaceChannel, ABC):
             The beam wandering variance in square meters.
         """
         length = self.channel_length_m
-
+        wave_type = "gaussian"  # Wandering variance is only defined for Gaussian beams
         radius_of_curvature_in, waist_radius_in = self._wave_parameters_in(
             wave_type, length
         )
@@ -659,15 +663,11 @@ class SlantChannel(FreeSpaceChannel, ABC):
             radius_of_curvature_in,
         )
         theta_bar_in = 1 - theta_in
-        print(
-            f"theta_in: {theta_in}, lambda_in: {lambda_in}, theta_bar_in: {theta_bar_in}"
-        )
         rytov_var = self.compute_rytov_variance(wave_type)
         tx_waist = self.transmitter_station.transmitter.waist_radius
 
-        lower_station, upper_station = self._lower_and_upper_stations()
-        lower_alt = lower_station.altitude_m
-        upper_alt = upper_station.altitude_m
+        lower_alt = self.lower_altitude_m
+        upper_alt = self.higher_altitude_m
 
         xi = self._normalized_distance_variable()
 
@@ -849,13 +849,8 @@ class HorizontalChannel(FreeSpaceChannel, ABC):
             ) * coherence_width_plane
         return coherence_width
 
-    def compute_wandering_variance(self, wave_type: WaveType) -> float:
-        """Compute the beam wandering variance for a free-space optical channel.
-
-        Parameters
-        ----------
-        wave_type : WaveType
-            Type of the wave: PLANE, SPHERICAL OR GAUSSIAN.
+    def compute_wandering_variance(self) -> float:
+        """Compute the beam wandering variance for a Gaussian beam in a horizontal free-space channel.
 
         Returns
         -------
@@ -863,6 +858,7 @@ class HorizontalChannel(FreeSpaceChannel, ABC):
             The beam wandering variance in square meters.
         """
         length = self.channel_length_m
+        wave_type = "gaussian"  # Wandering variance is only defined for Gaussian beams
 
         radius_of_curvature_in, waist_radius_in = self._wave_parameters_in(
             wave_type, length
