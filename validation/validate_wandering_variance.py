@@ -1,4 +1,4 @@
-"""Validate wandering variance against plane/spherical reference formulas."""
+"""Validate wandering variance against reference formula."""
 
 from fresqcos.telescopes import Transmitter, Receiver
 from fresqcos.channels.stations import TransmitterStation, ReceiverStation
@@ -22,8 +22,8 @@ matplotlib.rcParams["font.family"] = "STIXGeneral"
 matplotlib.rcParams["font.size"] = 14
 
 
-def wandering_variance_plane_horizontal(channel: HorizontalChannel) -> float:
-    """Compute the beam wandering variance for a plane wave in a horizontal free-space optical channel.
+def compute_wandering_variance_horizontal(channel: HorizontalChannel) -> float:
+    """Compute the beam wandering variance for a Gaussian beam in a horizontal free-space optical channel.
 
     Returns
     -------
@@ -37,8 +37,8 @@ def wandering_variance_plane_horizontal(channel: HorizontalChannel) -> float:
     return wandering_variance
 
 
-def wandering_variance_plane_uplink(channel: UplinkChannel) -> float:
-    """Compute the beam wandering variance for a plane wave in an uplink free-space optical channel.
+def compute_wandering_variance_uplink(channel: UplinkChannel) -> float:
+    """Compute the beam wandering variance for a Gaussian beam in an uplink free-space optical channel.
 
     Returns
     -------
@@ -73,11 +73,11 @@ if __name__ == "__main__":
     altitude_aerial = 20
     altitude_ground = 0
     altitude_satellite = 400
-    zenith_angle_deg = 70
+    zenith_angle_deg = 0
     wind_rms = 10
     reference_cn2 = 1.7e-14
     length_vector = np.linspace(1, 20, 50)
-    altitude_vector = np.linspace(1, altitude_satellite - 1, 50)
+    altitude_vector = np.linspace(1, altitude_satellite - 1, 500)
 
     tx_telescope = Transmitter(
         wavelength=wvln,
@@ -160,48 +160,40 @@ if __name__ == "__main__":
     )
 
     wandering_variance_general_horizontal_plane_list = []
-    wandering_variance_horizontal_plane_list = []
+    wandering_variance_horizontal_list = []
 
     for i in range(len(length_vector)):
 
-        wandering_variance_general_horizontal_plane = (
-            horizontal_channel.compute_wandering_variance(wave_type="plane")
+        wandering_variance_general_horizontal = (
+            horizontal_channel.compute_wandering_variance()
         )
-        wandering_variance_horizontal_plane = wandering_variance_plane_horizontal(
+        wandering_variance_horizontal = compute_wandering_variance_horizontal(
             horizontal_channel
         )
         wandering_variance_general_horizontal_plane_list.append(
-            wandering_variance_general_horizontal_plane
+            wandering_variance_general_horizontal
         )
-        wandering_variance_horizontal_plane_list.append(
-            wandering_variance_horizontal_plane
-        )
+        wandering_variance_horizontal_list.append(wandering_variance_horizontal)
 
         if i < len(length_vector) - 1:
             horizontal_channel.length_km = length_vector[i + 1]
 
-    wandering_variance_general_uplink_plane_list = []
-    wandering_variance_uplink_plane_list = []
-    wandering_variance_general_downlink_plane_list = []
+    wandering_variance_general_uplink_list = []
+    wandering_variance_uplink_list = []
+    wandering_variance_general_downlink_list = []
 
     for i in range(len(altitude_vector)):
 
-        wandering_variance_general_uplink_plane = (
-            uplink_channel.compute_wandering_variance(wave_type="plane")
-        )
-        wandering_variance_uplink_plane = wandering_variance_plane_uplink(
-            uplink_channel
-        )
-        wandering_variance_general_uplink_plane_list.append(
-            wandering_variance_general_uplink_plane
-        )
-        wandering_variance_uplink_plane_list.append(wandering_variance_uplink_plane)
+        wandering_variance_general_uplink = uplink_channel.compute_wandering_variance()
+        wandering_variance_uplink = compute_wandering_variance_uplink(uplink_channel)
+        wandering_variance_general_uplink_list.append(wandering_variance_general_uplink)
+        wandering_variance_uplink_list.append(wandering_variance_uplink)
 
-        wandering_variance_general_downlink_plane = (
-            downlink_channel.compute_wandering_variance(wave_type="plane")
+        wandering_variance_general_downlink = (
+            downlink_channel.compute_wandering_variance()
         )
-        wandering_variance_general_downlink_plane_list.append(
-            wandering_variance_general_downlink_plane
+        wandering_variance_general_downlink_list.append(
+            wandering_variance_general_downlink
         )
 
         if i < len(altitude_vector) - 1:
@@ -213,14 +205,14 @@ plt.figure()
 plt.plot(
     length_vector,
     wandering_variance_general_horizontal_plane_list,
-    label="Plane Wave (General)",
+    label="Gaussian Beam (General)",
 )
 plt.gca().set_prop_cycle(None)
 plt.plot(
     length_vector,
-    wandering_variance_horizontal_plane_list,
+    wandering_variance_horizontal_list,
     "o",
-    label="Plane Wave (Reference)",
+    label="Gaussian Beam (Reference)",
 )
 plt.xlabel("Channel Length (km)")
 plt.ylabel("Wandering Variance (m^2)")
@@ -232,15 +224,15 @@ plt.tight_layout()
 plt.figure()
 plt.plot(
     altitude_vector,
-    wandering_variance_general_uplink_plane_list,
-    label="Plane Wave (General)",
+    wandering_variance_general_uplink_list,
+    label="Gaussian Beam (General)",
 )
 plt.gca().set_prop_cycle(None)
 plt.plot(
     altitude_vector,
-    wandering_variance_uplink_plane_list,
+    wandering_variance_uplink_list,
     "o",
-    label="Plane Wave (Reference)",
+    label="Gaussian Beam (Reference)",
 )
 plt.xlabel("Platform altitude (km)")
 plt.ylabel("Wandering Variance (m^2)")
@@ -252,8 +244,8 @@ plt.tight_layout()
 plt.figure()
 plt.plot(
     altitude_vector,
-    wandering_variance_general_downlink_plane_list,
-    label="Plane Wave (General)",
+    wandering_variance_general_downlink_list,
+    label="Gaussian Beam (General)",
 )
 plt.xlabel("Platform altitude (km)")
 plt.ylabel("Wandering Variance (m^2)")
