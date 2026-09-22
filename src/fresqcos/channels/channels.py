@@ -254,7 +254,9 @@ class Channel(ABC):
 class FiberChannel(Channel):
     """A fiber optic communication channel."""
 
-       def __init__(self,*, loss_per_km: float, distance_km: float, detection_error: float):
+    def __init__(
+        self, *, loss_per_km: float, distance_km: float, detection_error: float
+    ):
         """Initialize the fiber channel with the given parameters.
 
         Parameters
@@ -299,14 +301,17 @@ class FiberChannel(Channel):
     @detection_error.setter
     def detection_error(self, value: float) -> None:
         if value < 0 or value > 1:
-            raise ValueError(f"detection_error must be non-negative and less than 1, got {value}")
+            raise ValueError(
+                f"detection_error must be non-negative and less than 1, got {value}"
+            )
         self._detection_error = float(value)
 
     def compute_channel_losses(self):
-        return self.distance_km*self.loss_per_km
+        return self.distance_km * self.loss_per_km
 
     def transmittance(self):
-        return 10**(-self.compute_channel_losses()/10)
+        return 10 ** (-self.compute_channel_losses() / 10)
+
 
 class FreeSpaceChannel(Channel):
     """Abstract base class for free-space optical communication channels."""
