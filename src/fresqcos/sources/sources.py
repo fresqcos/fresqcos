@@ -1,35 +1,75 @@
+"Module containing the single-photon source classes for the simulation of quantum communication protocols."
+
 from abc import ABC, abstractmethod
 import numpy as np
-from matplotlib import pyplot as plt
 import math
 from scipy.stats import poisson
 import scipy
+from scipy.integrate import quad
 
 
 class Source(ABC):
-    pass
+    "Abstract base class for single-photon sources."
 
+    def __init__(
+            self, 
+            repetition_rate: float, 
+            optical_losses: float = 0
+        ) -> None:
+        """Initialize the source with the given parameters.
 
+        Parameters
+        ----------
+        repetition_rate : float
+            The pulse repetition rate in Hz.
+        optical_losses : float
+            The optical losses of the source in dB.
+        """
+        self.repetition_rate = repetition_rate
+        self.optical_losses = optical_losses
+
+    def compute_optical_efficiency(self) -> float:
+        """Return the optical efficiency of the source.
+
+        Returns
+        -------
+        float
+            The optical efficiency of the source.
+        """
+        optical_efficiency = 10 ** (-self.optical_losses / 10)
+        return optical_efficiency
+
+    @abstractmethod
+    def compute_probability_sending_i_state(self, i: int) -> float:
+        """Compute the probability of sending i photons.
+
+        Parameters
+        ----------
+        i : int
+            The number of photons.
+
+        Returns
+        -------
+        float
+            The probability of sending i photons.
+        """
+        pass
+
+    
 ## Pulsed sources
 
 
-class Attenuated_Laser(Source):
+class AttenuatedLaser(Source):
 
     def __init__(
         self,
         *,
         mean_photon_number: float,
         repetition_rate: float,
-        optical_losses: Optional[float] = None,
-    ):
-
+        optical_losses: float = 0,
+    ) -> None:
+        super().__init__(repetition_rate, optical_losses)
         self.mean_photon_number = mean_photon_number
-        self.repetition_rate = repetition_rate
-
-        if optical_losses is None:
-            self.optical_losses = 0
-        else:
-            self.optical_losses = optical_losses
 
     @property
     def repetition_rate(self) -> float:
@@ -61,14 +101,14 @@ class Attenuated_Laser(Source):
 
         self._mean_photon_number = float(value)
 
-    def probability_sending_i_state(self, i) -> float:
+    def compute_probability_sending_i_state(self, i) -> float:
         return poisson.pmf(i, self.mean_photon_number)
 
-    def optical_efficiency(self):
+    def compute_optical_efficiency(self):
         return 10 ** (-self.optical_losses / 10)
 
 
-class Multiplexed_Heralded_Photon_Source(Source):
+class MultiplexedHeraldedPhotonSource(Source):
 
     def __init__(
         self,
@@ -76,17 +116,13 @@ class Multiplexed_Heralded_Photon_Source(Source):
         mean_photon_number: float,
         repetition_rate: float,
         sources_num: int,
-        optical_losses: Optional[float] = None,
+        optical_losses: float = 0,
     ):
 
         self.mean_photon_number = mean_photon_number
         self.sources_num = sources_num
         self.repetition_rate = repetition_rate
-
-        if optical_losses is None:
-            self.optical_losses = 0
-        else:
-            self.optical_losses = optical_losses
+        self.optical_losses = optical_losses
 
     @property
     def repetition_rate(self) -> float:
@@ -132,7 +168,7 @@ class Multiplexed_Heralded_Photon_Source(Source):
             raise ValueError(f"sources_num must be non-negative, got {value}")
         self._sources_num = int(value)
 
-    def probability_sending_i_state(self, i):
+    def compute_probability_sending_i_state(self, i):
 
         if i == 0:
             return np.exp(-self.mean_photon_number * self.sources_num)
@@ -144,11 +180,11 @@ class Multiplexed_Heralded_Photon_Source(Source):
                 / np.exp(-self.mean_photon_number)
             )
 
-    def optical_efficiency(self):
+    def compute_optical_efficiency(self):
         return 10 ** (-self.optical_losses / 10)
 
 
-class Symmetric_Multiplexed_Heralded_Photon_Source(Source):
+class SymmetricMultiplexedHeraldedPhotonSource(Source):
 
     def __init__(
         self,
@@ -158,7 +194,7 @@ class Symmetric_Multiplexed_Heralded_Photon_Source(Source):
         sources_num: int,
         transmittance: float,
         efficiency: float,
-        optical_losses: Optional[float] = None,
+        optical_losses: float = 0,
     ):
 
         self.mean_photon_number = mean_photon_number
@@ -166,11 +202,7 @@ class Symmetric_Multiplexed_Heralded_Photon_Source(Source):
         self.sources_num = sources_num
         self.transmittance = transmittance
         self.efficiency = efficiency
-
-        if optical_losses is None:
-            self.optical_losses = 0
-        else:
-            self.optical_losses = optical_losses
+        self.optical_losses = optical_losses
 
     @property
     def repetition_rate(self) -> float:
@@ -218,7 +250,7 @@ class Symmetric_Multiplexed_Heralded_Photon_Source(Source):
             )
         self._sources_num = int(value)
 
-    def probability_sending_i_state(self, i):
+    def compute_probability_sending_i_state(self, i):
         k = math.log2(self.sources_num)
         return (1 - self.efficiency) * np.exp(
             -(1 - self.efficiency) * self.mean_photon_number
@@ -250,11 +282,11 @@ class Symmetric_Multiplexed_Heralded_Photon_Source(Source):
             )
         )
 
-    def optical_efficiency(self):
+    def compute_optical_efficiency(self):
         return 10 ** (-self.optical_losses / 10)
 
 
-class Asymmetric_Multiplexed_Heralded_Photon_Source(Source):
+class AsymmetricMultiplexedHeraldedPhotonSource(Source):
 
     def __init__(
         self,
@@ -264,7 +296,7 @@ class Asymmetric_Multiplexed_Heralded_Photon_Source(Source):
         sources_num: int,
         transmittance: float,
         efficiency: float,
-        optical_losses: Optional[float] = None,
+        optical_losses: float = 0,
     ):
 
         self.mean_photon_number = mean_photon_number
@@ -272,11 +304,7 @@ class Asymmetric_Multiplexed_Heralded_Photon_Source(Source):
         self.sources_num = sources_num
         self.transmittance = transmittance
         self.efficiency = efficiency
-
-        if optical_losses is None:
-            self.optical_losses = 0
-        else:
-            self.optical_losses = optical_losses
+        self.optical_losses = optical_losses
 
     @property
     def repetition_rate(self) -> float:
@@ -322,7 +350,7 @@ class Asymmetric_Multiplexed_Heralded_Photon_Source(Source):
             raise ValueError(f"sources_num must be non-negative, got {value}")
         self._sources_num = int(value)
 
-    def probability_sending_i_state(self, i):
+    def compute_probability_sending_i_state(self, i):
         sum = 0
         for k in range(1, self.sources_num):
             if k == self.sources_num:
@@ -357,11 +385,11 @@ class Asymmetric_Multiplexed_Heralded_Photon_Source(Source):
             i
         )
 
-    def optical_efficiency(self):
+    def compute_optical_efficiency(self):
         return 10 ** (-self.optical_losses / 10)
 
 
-class Single_Photon_Source(Source):
+class SinglePhotonSource(Source):
 
     def __init__(
         self,
@@ -369,17 +397,13 @@ class Single_Photon_Source(Source):
         repetition_rate: float,
         brightness: float,
         g2: float,
-        optical_losses: Optional[float] = None,
+        optical_losses: float = 0,
     ):
 
         self.repetition_rate = repetition_rate
         self.brightness = brightness
         self.g2 = g2
-
-        if optical_losses is None:
-            self.optical_losses = 0
-        else:
-            self.optical_losses = optical_losses
+        self.optical_losses = optical_losses
 
     @property
     def repetition_rate(self) -> float:
@@ -426,7 +450,7 @@ class Single_Photon_Source(Source):
             raise ValueError(f"g2 must be non-negative, got {value}")
         self._g2 = float(value)
 
-    def probability_sending_i_state(self, i):
+    def compute_probability_sending_i_state(self, i):
         if i < 0 or i > 2:
             return 0
 
@@ -446,27 +470,23 @@ class Single_Photon_Source(Source):
             else:
                 return p2
 
-    def optical_efficiency(self):
+    def compute_optical_efficiency(self):
         return 10 ** (-self.optical_losses / 10)
 
 
-class Entangled_PDC_Source(Source):
+class EntangledPDCSource(Source):
 
     def __init__(
         self,
         *,
         mean_photon_number: float,
         repetition_rate: float,
-        optical_losses: Optional[float] = None,
+        optical_losses: float = 0,
     ):
 
         self.mean_photon_number = mean_photon_number
         self.repetition_rate = repetition_rate
-
-        if optical_losses is None:
-            self.optical_losses = 0
-        else:
-            self.optical_losses = optical_losses
+        self.optical_losses = optical_losses
 
     @property
     def repetition_rate(self) -> float:
@@ -501,35 +521,31 @@ class Entangled_PDC_Source(Source):
     def brightness_parameter(self):
         return self.mean_photon_number / 2
 
-    def probability_sending_i_state(self, i) -> float:
+    def compute_probability_sending_i_state(self, i) -> float:
         return ((i + 1) * self.brightness_parameter() ** i) / (
             self.brightness_parameter() + 1
         ) ** (i + 2)
 
-    def optical_efficiency(self):
+    def compute_optical_efficiency(self):
         return 10 ** (-self.optical_losses / 10)
 
 
 ## Continuous wave pumped
 
 
-class Continuous_Wave_Pumped_Source(Source):
+class ContinuousWavePumpedSource(Source):
 
     def __init__(
         self,
         *,
         brightness: float,
         g2_profile: Callable,
-        optical_losses: Optional[float] = None,
+        optical_losses: float = 0,
     ):
 
         self.brightness = brightness
         self.g2_profile = g2_profile
-
-        if optical_losses is None:
-            self.optical_losses = 0
-        else:
-            self.optical_losses = optical_losses
+        self.optical_losses = optical_losses
 
     @property
     def brightness(self) -> float:
@@ -545,32 +561,26 @@ class Continuous_Wave_Pumped_Source(Source):
             raise ValueError(f"brightness must be non-negative, got {value}")
         self._brightness = float(value)
 
-    def probability_sending_i_state(self, i, coincidence_time) -> float:
+    def compute_probability_sending_i_state(self, i, coincidence_time) -> float:
         return poisson.pmf(i, self.brightness * coincidence_time)
 
     def coincidence_window_efficiency(self, coincidence_time):
 
         return quad(self.g2_profile, -coincidence_time, coincidence_time)[0]
 
-    def optical_efficiency(self):
+    def compute_optical_efficiency(self):
         return 10 ** (-self.optical_losses / 10)
 
 
 ## Entanglement swapping sources
 
 
-class Sagnac_Sources(Source):
+class SagnacSource(Source):
 
-    def __init__(
-        self, *, mean_photon_number: float, optical_losses: Optional[float] = None
-    ):
+    def __init__(self, *, mean_photon_number: float, optical_losses: float = 0):
 
         self.mean_photon_number = mean_photon_number
-
-        if optical_losses is None:
-            self.optical_losses = 0
-        else:
-            self.optical_losses = optical_losses
+        self.optical_losses = optical_losses
 
     @property
     def mean_photon_number(self) -> float:
@@ -587,7 +597,7 @@ class Sagnac_Sources(Source):
 
         self._mean_photon_number = float(value)
 
-    def optical_efficiency(self):
+    def compute_optical_efficiency(self):
         return 10 ** (-self.optical_losses / 10)
 
     def two_modes_squeezed_vacuum_states(self, sources_number):

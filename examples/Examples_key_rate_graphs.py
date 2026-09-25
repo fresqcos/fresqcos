@@ -3,7 +3,7 @@
 from matplotlib import pyplot as plt
 import numpy as np
 
-from fresqcos.sources.sources import Attenuated_Laser, Single_Photon_Source, Multiplexed_Heralded_Photon_Source, Symmetric_Multiplexed_Heralded_Photon_Source, Asymmetric_Multiplexed_Heralded_Photon_Source, Entangled_PDC_Source, Continuous_Wave_Pumped_Source, Sagnac_Sources
+from fresqcos.sources.sources import AttenuatedLaser, SinglePhotonSource, MultiplexedHeraldedPhotonSource, SymmetricMultiplexedHeraldedPhotonSource, AsymmetricMultiplexedHeraldedPhotonSource, EntangledPDCSource, ContinuousWavePumpedSource, SagnacSource
 
 from fresqcos.detectors.detectors import Threshold_detector
 
@@ -151,7 +151,7 @@ def visibility_mean_photon_number(*,min, max, values_number, bell_measurement_nu
 
 # Test 1:
 
-source_1 = Attenuated_Laser(mean_photon_number=0.48, repetition_rate=0)
+source_1 = AttenuatedLaser(mean_photon_number=0.48, repetition_rate=0)
 
 detector_1 = Threshold_detector(dark_count_rate=0.17, efficiency=5/100, time_window=10**(-5), after_pulsing=0) #Y_0 = 1.7*10**(-6)
 
@@ -166,7 +166,7 @@ key_rate_distance_km_bb84(min=0, max=160, values_number=300, source=source_1, de
 
 # Test 2:
 
-source_2 = Symmetric_Multiplexed_Heralded_Photon_Source(mean_photon_number=0.48, repetition_rate=0, sources_num=32, transmittance=0.5, efficiency=0.7)
+source_2 = SymmetricMultiplexedHeraldedPhotonSource(mean_photon_number=0.48, repetition_rate=0, sources_num=32, transmittance=0.5, efficiency=0.7)
 
 detector_2 = Threshold_detector(dark_count_rate=20, efficiency=0.25, time_window=10**(-8), after_pulsing=0)
 
@@ -181,7 +181,7 @@ key_rate_loss_bb84(min=0, max=275, values_number=300, source=source_2, detector=
 
 # Test 3:
 
-source_3 = Asymmetric_Multiplexed_Heralded_Photon_Source(mean_photon_number=0.6, repetition_rate=0, sources_num=32, transmittance=0.5, efficiency=0.7)
+source_3 = AsymmetricMultiplexedHeraldedPhotonSource(mean_photon_number=0.6, repetition_rate=0, sources_num=32, transmittance=0.5, efficiency=0.7)
 
 detector_3 = Threshold_detector(dark_count_rate=20, efficiency=0.25, time_window=10**(-8), after_pulsing=0)
 
@@ -196,7 +196,7 @@ key_rate_loss_bb84(min=0, max=275, values_number=300, source=source_3, detector=
 
 # Test 4:
 
-source_4 = Entangled_PDC_Source(mean_photon_number=0.053, repetition_rate=0)
+source_4 = EntangledPDCSource(mean_photon_number=0.053, repetition_rate=0)
 
 detector_4 = Threshold_detector(dark_count_rate=6.02, efficiency=14.5/100, time_window=10**(-6), after_pulsing=0)
 
@@ -211,7 +211,7 @@ key_rate_loss_pulsed_bbm92(min=0, max=170, values_number=300, source=source_4, d
 # Test 5
 ## Entanglement swapping with Sagnac Source
 
-source_5 = Sagnac_Sources(mean_photon_number = 0.48)
+source_5 = SagnacSource(mean_photon_number = 0.48)
 
 detector_5 = Threshold_detector(dark_count_rate=10**(5), efficiency=0.7, time_window=10**(-10), after_pulsing=0)
 
@@ -228,7 +228,7 @@ visibility_mean_photon_number(min=0, max=0.2, values_number=50, bell_measurement
 def g2_source_6(x):
     return voigt_profile(x, 123.2*10**(-12), 99.3*10**(-12))
 
-source_6 = Continuous_Wave_Pumped_Source(brightness=1646*(10**5), g2_profile= g2_source_6, optical_losses = 4.5)
+source_6 = ContinuousWavePumpedSource(brightness=1646*(10**5), g2_profile= g2_source_6, optical_losses = 4.5)
 
 detector_6 = Threshold_detector(dark_count_rate=350, efficiency=0.76, time_window=310*10**(-12), after_pulsing=0)
 
@@ -252,7 +252,7 @@ def g2_source_7(t):
     t_delta = 10**(-10)
     return (2.0 / t_delta) * np.sqrt(np.log(2.0) / np.pi)*np.exp(-4.0 * np.log(2.0) * (t ** 2) / (t_delta**2))
 
-source_7 = Continuous_Wave_Pumped_Source(brightness=0.05*(10**9), g2_profile = g2_source_7)
+source_7 = ContinuousWavePumpedSource(brightness=0.05*(10**9), g2_profile = g2_source_7)
 
 detector_7 = Threshold_detector(dark_count_rate=250, efficiency=0.76, time_window=46*10**(-12), after_pulsing=0)
 
