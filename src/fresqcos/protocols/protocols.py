@@ -3,25 +3,14 @@ import numpy as np
 import math
 import scipy
 from mpmath import mp
+import itertools as its
 
 mp.dps = 80
 
-from fresqcos.sources.sources import (
-    AttenuatedLaser,
-    SinglePhotonSource,
-    MultiplexedHeraldedPhotonSource,
-    SymmetricMultiplexedHeraldedPhotonSource,
-    AsymmetricMultiplexedHeraldedPhotonSource,
-    EntangledPDCSource,
-    ContinuousWavePumpedSource,
-    SagnacSource,
-)
-
-from fresqcos.detectors.detectors import Threshold_detector
-
-from fresqcos.receiver import Receiver
-
-from fresqcos.channel import Channel
+from fresqcos.sources.sources import Source
+from fresqcos.detectors.detectors import Detector
+from fresqcos.receivers import Receiver
+from fresqcos.channels.channels import Channel, FiberChannel
 
 ## Functions
 

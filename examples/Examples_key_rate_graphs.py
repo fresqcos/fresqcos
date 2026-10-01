@@ -3,15 +3,15 @@
 from matplotlib import pyplot as plt
 import numpy as np
 
-from fresqcos.sources.sources import AttenuatedLaser, SinglePhotonSource, MultiplexedHeraldedPhotonSource, SymmetricMultiplexedHeraldedPhotonSource, AsymmetricMultiplexedHeraldedPhotonSource, EntangledPDCSource, ContinuousWavePumpedSource, SagnacSource
+from fresqcos.sources.sources import Source, AttenuatedLaser, SymmetricMultiplexedHeraldedPhotonSource, AsymmetricMultiplexedHeraldedPhotonSource, EntangledPDCSource, ContinuousWavePumpedSource, SagnacSource
 
-from fresqcos.detectors.detectors import Threshold_detector
+from fresqcos.detectors.detectors import Detector, ThresholdDetector
 
 from fresqcos.protocols.protocols import BB84, Pulsed_BBM92, BBM92_continuous_wave_pumped_source, Continuous_Entanglement_swapping
 
-from fresqcos.receiver import Receiver
+from fresqcos.receivers import Receiver
 
-from fresqcos.channel import Channel
+from fresqcos.channels.channels import FiberChannel
 
 ## Plot
 
@@ -44,9 +44,9 @@ def key_rate_distance_km_pulsed_bbm92(*, min, max, values_number, source: Source
         else:
             ch2 = channel_2
 
-        x_axis.append(channel_1.distance_km+ch_2.distance_km)
+        x_axis.append(channel_1.distance_km+ch2.distance_km)
 
-        protocol = Pulsed_BBM92(source=source, detector1=detector1, channel_1=channel_1, channel_2 = ch_2, receiver1=receiver1, correction_efficiency=correction_efficiency, detector2=detector2, receiver2=receiver2)
+        protocol = Pulsed_BBM92(source=source, detector1=detector1, channel_1=channel_1, channel_2 = ch2, receiver1=receiver1, correction_efficiency=correction_efficiency, detector2=detector2, receiver2=receiver2)
         y1 = protocol.key_rate()
         y1_values.append(y1)
 
@@ -153,7 +153,7 @@ def visibility_mean_photon_number(*,min, max, values_number, bell_measurement_nu
 
 source_1 = AttenuatedLaser(mean_photon_number=0.48, repetition_rate=0)
 
-detector_1 = Threshold_detector(dark_count_rate=0.17, efficiency=5/100, time_window=10**(-5), after_pulsing=0) #Y_0 = 1.7*10**(-6)
+detector_1 = ThresholdDetector(dark_count_rate=0.17, efficiency=5/100, time_window=10**(-5), after_pulsing=0) #Y_0 = 1.7*10**(-6)
 
 receiver_1 = Receiver(transmittance=0.9)
 
@@ -168,7 +168,7 @@ key_rate_distance_km_bb84(min=0, max=160, values_number=300, source=source_1, de
 
 source_2 = SymmetricMultiplexedHeraldedPhotonSource(mean_photon_number=0.48, repetition_rate=0, sources_num=32, transmittance=0.5, efficiency=0.7)
 
-detector_2 = Threshold_detector(dark_count_rate=20, efficiency=0.25, time_window=10**(-8), after_pulsing=0)
+detector_2 = ThresholdDetector(dark_count_rate=20, efficiency=0.25, time_window=10**(-8), after_pulsing=0)
 
 receiver_2 = Receiver(transmittance=1)
 
@@ -183,7 +183,7 @@ key_rate_loss_bb84(min=0, max=275, values_number=300, source=source_2, detector=
 
 source_3 = AsymmetricMultiplexedHeraldedPhotonSource(mean_photon_number=0.6, repetition_rate=0, sources_num=32, transmittance=0.5, efficiency=0.7)
 
-detector_3 = Threshold_detector(dark_count_rate=20, efficiency=0.25, time_window=10**(-8), after_pulsing=0)
+detector_3 = ThresholdDetector(dark_count_rate=20, efficiency=0.25, time_window=10**(-8), after_pulsing=0)
 
 receiver_3 = Receiver(transmittance=1)
 
@@ -198,7 +198,7 @@ key_rate_loss_bb84(min=0, max=275, values_number=300, source=source_3, detector=
 
 source_4 = EntangledPDCSource(mean_photon_number=0.053, repetition_rate=0)
 
-detector_4 = Threshold_detector(dark_count_rate=6.02, efficiency=14.5/100, time_window=10**(-6), after_pulsing=0)
+detector_4 = ThresholdDetector(dark_count_rate=6.02, efficiency=14.5/100, time_window=10**(-6), after_pulsing=0)
 
 receiver_4 = Receiver(transmittance=1)
 
@@ -213,7 +213,7 @@ key_rate_loss_pulsed_bbm92(min=0, max=170, values_number=300, source=source_4, d
 
 source_5 = SagnacSource(mean_photon_number = 0.48)
 
-detector_5 = Threshold_detector(dark_count_rate=10**(5), efficiency=0.7, time_window=10**(-10), after_pulsing=0)
+detector_5 = ThresholdDetector(dark_count_rate=10**(5), efficiency=0.7, time_window=10**(-10), after_pulsing=0)
 
 channel_5 = FiberChannel(loss_per_km=0.2, distance_km=150, detection_error=0.01)
 
@@ -230,7 +230,7 @@ def g2_source_6(x):
 
 source_6 = ContinuousWavePumpedSource(brightness=1646*(10**5), g2_profile= g2_source_6, optical_losses = 4.5)
 
-detector_6 = Threshold_detector(dark_count_rate=350, efficiency=0.76, time_window=310*10**(-12), after_pulsing=0)
+detector_6 = ThresholdDetector(dark_count_rate=350, efficiency=0.76, time_window=310*10**(-12), after_pulsing=0)
 
 channel_6 = FiberChannel(loss_per_km=0.1, distance_km=0, detection_error=0.005)
 
@@ -254,7 +254,7 @@ def g2_source_7(t):
 
 source_7 = ContinuousWavePumpedSource(brightness=0.05*(10**9), g2_profile = g2_source_7)
 
-detector_7 = Threshold_detector(dark_count_rate=250, efficiency=0.76, time_window=46*10**(-12), after_pulsing=0)
+detector_7 = ThresholdDetector(dark_count_rate=250, efficiency=0.76, time_window=46*10**(-12), after_pulsing=0)
 
 channel_7 = FiberChannel(loss_per_km=0.2, distance_km=0, detection_error=0.01)
 
