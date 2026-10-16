@@ -14,22 +14,77 @@ from fresqcos.channels.channels import Channel, FiberChannel
 
 ## Functions
 
+def validate_probability(p: float, name: str = "p") -> float:
+    """
+    Validate that a probability is within the valid range [0, 1].
 
-def binary_shannon_entropy(x):
-    if x <= 0 or x >= 1:
-        return 0
-    return -x * math.log2(x) - (1 - x) * math.log2(1 - x)
+    Parameters
+    ----------
+    p : float
+        The probability to validate.
+    name : str, optional
+        The name of the probability variable, by default "p".
+
+    Returns
+    -------
+    float
+        The validated probability.
+
+    Raises
+    ------
+    ValueError
+        If the probability is not in the valid range.
+    """
+    if not math.isfinite(p) or not 0 <= p <= 1:
+        raise ValueError(f"{name} must be in [0, 1], got {p}")
+    return p
+
+def binary_shannon_entropy(x: float) -> float:
+    """Calculate the binary Shannon entropy.
+
+    Parameters
+    ----------
+        x : float
+            The probability of the event.
+
+    Returns
+    -------
+        binary_entropy : float
+            The binary Shannon entropy of the event.
+    """
+    x = validate_probability(x, "binary_entropy")
+    if x == 0 or x == 1:
+        binary_entropy = 0
+    else:
+        binary_entropy = -x * math.log2(x) - (1 - x) * math.log2(1 - x)
+    return binary_entropy
 
 
-def no_x_event_i_time(x, i):
+def no_x_event_i_time(x: float, i: int) -> float:
+    """
+    Calculate the probability of no event occurring in a given time interval.
 
-    return (1 - x) ** i
+    Parameters
+    ----------
+    x : float
+        The probability of an event occurring in a given time interval.
+    i : int
+        The number of time intervals.
+
+    Returns
+    -------
+    probability : float
+        The probability of no event occurring in the given time interval.
+    """
+    probability = (1 - x) ** i
+    return probability
 
 
 ## Protocols
 
 
 class Protocol(ABC):
+    "Abstract base class for quantum communication protocols."
 
     def __init__(
         self,
@@ -39,7 +94,22 @@ class Protocol(ABC):
         receiver: Receiver,
         correction_efficiency: float,
     ):
+        """
+        Initialize the Protocol class with the given parameters.
 
+        Parameters
+        ----------
+        source : Source
+            The source of the quantum states.
+        detector : Detector
+            The detector used to measure the quantum states.
+        channel : Channel
+            The channel through which the quantum states are transmitted.
+        receiver : Receiver
+            The receiver that processes the received quantum states.
+        correction_efficiency : float
+            The efficiency of the error correction process.
+        """
         self.source = source
         self.detector = detector
         self.channel = channel
@@ -48,22 +118,35 @@ class Protocol(ABC):
 
 
 class BB84(Protocol):
+    "Class representing the BB84 quantum key distribution protocol."
 
     def __init__(
         self,
         *,
         source: Source,
         detector: Detector,
-        channel: FiberChannel,
+        channel: Channel,
         receiver: Receiver,
         correction_efficiency: float,
     ):
-
-        self.source = source
-        self.detector = detector
-        self.channel = channel
-        self.receiver = receiver
-        self.correction_efficiency = correction_efficiency
+        """
+        Initialize the BB84 protocol with the given parameters.
+        
+        Parameters
+        ----------
+        source : Source
+            The source of the quantum states.
+        detector : Detector
+            The detector used to measure the quantum states.
+        channel : Channel
+            The channel through which the quantum states are transmitted.
+        receiver : Receiver
+            The receiver that processes the received quantum states.
+        correction_efficiency : float
+            The efficiency of the error correction process.
+        """
+        super()._init__(
+            source, detector, channel, receiver, correction_efficiency)
 
     ## X basis
 
