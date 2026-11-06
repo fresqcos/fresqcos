@@ -12,9 +12,15 @@ from fresqcos.channels.geometry import (
     compute_minimum_alt,
 )
 from fresqcos.channels.atmosphere import Atmosphere
+from fresqcos.channels.probability_distributions import hoyt_pdf
+from fresqcos.channels.collection_efficiency import (
+    compute_collection_efficiency_pdf_circular_weak_turbulence,
+)
 from scipy.integrate import quad
 import numpy as np
 from numbers import Real
+
+eta = np.linspace(0, 1, 1000)
 
 
 class LinkType(str, Enum):
@@ -383,6 +389,35 @@ class FreeSpaceChannel(Channel, ABC):
             return np.inf, self.transmitter_station.transmitter.waist_radius
         else:
             raise ValueError(f"Invalid wave_type: {wave_type}")
+
+    def compute_vac_beam_waist_radius(self, wave_type: str) -> float:
+        """Compute the beam waist radius at the receiver plane for propagation in vacuum.
+
+        Returns
+        -------
+        float
+            The vacuum beam waist radius at the receiver plane in meters.
+        """
+        if wave_type == WaveType.PLANE or wave_type == WaveType.SPHERICAL:
+            raise ValueError(
+                "Beam waist radius is only defined for a finite Gaussian beam. "
+                "Use WaveType.GAUSSIAN for a finite transmitter beam."
+            )
+        
+        length = self.channel_length_m
+        
+        radius_of_curvature_in, waist_radius_in = self._wave_parameters_in(
+            wave_type, length
+        )
+        theta_in, lambda_in = input_plane_parameters(
+            length,
+            self.transmitter_station.transmitter.wavelength,
+            waist_radius_in,
+            radius_of_curvature_in,
+        )
+
+        waist_radius_out = waist_radius_in * np.sqrt(theta_in**2 + lambda_in**2)
+        return waist_radius_out
 
     @abstractmethod
     def compute_channel_losses(self) -> float:
@@ -905,6 +940,9 @@ class DownlinkChannel(SlantChannel, ABC):
             The station hosting the receiver.
         atmospheric_channel : Atmosphere
             The atmospheric effects on the channel.
+        zenith_angle_deg : float, optional
+            The zenith angle of the link in degrees. If not provided,
+            it will be computed from the station coordinates.
         """
         super().__init__(
             transmitter_station, receiver_station, atmospheric_channel, zenith_angle_deg
@@ -963,6 +1001,57 @@ class UplinkChannel(SlantChannel, ABC):
 
 class SatToAerialChannel(DownlinkChannel):
     """A satellite to aerial platform free-space optical communication channel."""
+
+    def __init__(
+        self,
+        transmitter_station: TransmitterStation,
+        receiver_station: ReceiverStation,
+        atmospheric_channel: Atmosphere,
+        zenith_angle_deg: float | None = None,
+    ) -> None:
+        """Initialize the satellite to aerial platform channel with the given parameters.
+
+        Parameters
+        ----------
+        transmitter_station : TransmitterStation
+            The station hosting the transmitter.
+        receiver_station : ReceiverStation
+            The station hosting the receiver.
+        atmospheric_channel : Atmosphere
+            The atmospheric effects on the channel.
+        zenith_angle_deg : float, optional
+            The zenith angle of the link in degrees. If not provided,
+            it will be computed from the station coordinates.
+        """
+        super().__init__(
+            transmitter_station, receiver_station, atmospheric_channel, zenith_angle_deg
+        )
+
+    def compute_collection_efficiency_pdf(self) -> np.ndarray:
+        """Compute the collection efficiency PDF for a satellite to aerial platform channel.
+
+        Returns
+        -------
+        float
+            The collection efficiency PDF.
+        """
+        length = self.channel_length_m
+        pointing_error_var_x = (length * self.transmitter_station.transmitter.pointing_error_x) ** 2
+        pointing_error_var_y = (length * self.transmitter_station.transmitter.pointing_error_y) ** 2
+        pointing_error_std_x = np.sqrt(pointing_error_var_x)
+        pointing_error_std_y = np.sqrt(pointing_error_var_y)
+        q = min(pointing_error_std_x, pointing_error_std_y) / max(
+            pointing_error_std_x, pointing_error_std_y
+        )
+        omega = self.pointing_error_var_x + self.pointing_error_var_y
+        radial_pdf = lambda r: hoyt_pdf(r, q, omega)
+        rx_radius = self.receiver_station.receiver.aperture / 2
+        collection_efficiency_pdf = (
+            compute_collection_efficiency_pdf_circular_weak_turbulence(
+                eta, radial_pdf, rx_radius, self.transmitter_station.transmitter.waist_radius
+            )
+        )
+        return collection_efficiency_pdf
 
     def compute_channel_losses(self) -> float:
         pass

@@ -125,3 +125,30 @@ def lognegative_weibull_pdf(eta, eta_0, wandering_variance, r, l):
             )
         )
     return pdf
+
+
+def hoyt_pdf(r: np.ndarray, q: float, omega: float) -> np.ndarray:
+    """Compute Hoyt distribution probability density function (PDF).
+
+    Parameters
+    ----------
+    r : np.ndarray
+        Input random variable values to calculate PDF for.
+    q : float
+        Shape parameter of the Hoyt distribution.
+    omega : float
+        Scale parameter of the Hoyt distribution.
+
+    Returns
+    -------
+    pdf : np.ndarray
+        PDF of Hoyt distribution for values of r.
+    """
+    pdf = (
+        r
+        * (1 + q**2)
+        / (q * omega)
+        * np.exp(-((1 + q**2) ** 2 * r**2) / (4 * q**2 * omega))
+        * np.i0(((1 - q**4) * r**2) / (4 * q**2 * omega))
+    )
+    return pdf

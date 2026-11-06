@@ -143,7 +143,7 @@ if __name__ == "__main__":
         waist_radius=tx_waist_radius,
         obscuration_ratio=tx_obscuration_ratio,
         internal_loss=tx_internal_loss,
-        pointing_error=tx_pointing_error,
+        pointing_error_x=tx_pointing_error,
     )
 
     rx_telescope = Receiver(

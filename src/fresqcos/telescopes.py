@@ -80,7 +80,8 @@ class Transmitter(Telescope):
         waist_radius: float,
         obscuration_ratio: float,
         internal_loss: float,
-        pointing_error: float,
+        pointing_error_x: float = 0,
+        pointing_error_y: float = 0,
     ) -> None:
         """Initialize the transmitter with the given parameters.
 
@@ -94,8 +95,10 @@ class Transmitter(Telescope):
             The ratio of the obscured area to the total area of the aperture.
         internal_loss : float
             The internal loss in the transmitter.
-        pointing_error : float
-            The pointing error of the transmitter.
+        pointing_error_x : float
+            The pointing error of the transmitter in radians in the x-direction.
+        pointing_error_y : float
+            The pointing error of the transmitter in radians in the y-direction.
         """
         super().__init__(
             wavelength=wavelength,
@@ -103,7 +106,8 @@ class Transmitter(Telescope):
             internal_loss=internal_loss,
         )
         self.waist_radius = waist_radius
-        self.pointing_error = pointing_error
+        self.pointing_error_x = pointing_error_x
+        self.pointing_error_y = pointing_error_y
 
     @property
     def waist_radius(self) -> float:
@@ -120,18 +124,31 @@ class Transmitter(Telescope):
         self._waist_radius = value
 
     @property
-    def pointing_error(self) -> float:
-        """Return the pointing error of the transmitter.
+    def pointing_error_x(self) -> float:
+        """Return the pointing error of the transmitter in the x-direction.
 
         Must be non-negative.
         """
-        return self._pointing_error
+        return self._pointing_error_x
 
-    @pointing_error.setter
-    def pointing_error(self, value: float) -> None:
+    @pointing_error_x.setter
+    def pointing_error_x(self, value: float) -> None:
         if value < 0:
-            raise ValueError(f"pointing_error must be non-negative, got {value}")
-        self._pointing_error = value
+            raise ValueError(f"pointing_error_x must be non-negative, got {value}")
+
+    @property
+    def pointing_error_y(self) -> float:
+        """Return the pointing error of the transmitter in the y-direction.
+
+        Must be non-negative.
+        """
+        return self._pointing_error_y
+
+    @pointing_error_y.setter
+    def pointing_error_y(self, value: float) -> None:
+        if value < 0:
+            raise ValueError(f"pointing_error_y must be non-negative, got {value}")
+        self._pointing_error_y = value
 
 
 class Receiver(Telescope):

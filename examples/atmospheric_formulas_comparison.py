@@ -35,7 +35,8 @@ if __name__ == "__main__":
         waist_radius=tx_waist_radius,
         obscuration_ratio=tx_obscuration_ratio,
         internal_loss=tx_internal_loss,
-        pointing_error=tx_pointing_error,
+        pointing_error_x=tx_pointing_error,
+        pointing_error_y=tx_pointing_error,
     )
 
     rx_telescope = Receiver(
@@ -116,9 +117,9 @@ if __name__ == "__main__":
         conherence_width_plane_list.append(coherence_width_plane)
         conherence_width_spherical_list.append(coherence_width_spherical)
 
-        wandering_variance_plane = free_space_channel.compute_wandering_variance(link_type="downlink", wave_type="plane")
-        wandering_variance_spherical = free_space_channel.compute_wandering_variance(link_type="downlink", wave_type="spherical")
-        wandering_variance_gaussian = free_space_channel.compute_wandering_variance(link_type="downlink", wave_type="gaussian")
+        wandering_variance_plane = free_space_channel.compute_turb_wandering_variance(link_type="downlink", wave_type="plane")
+        wandering_variance_spherical = free_space_channel.compute_turb_wandering_variance(link_type="downlink", wave_type="spherical")
+        wandering_variance_gaussian = free_space_channel.compute_turb_wandering_variance(link_type="downlink", wave_type="gaussian")
         wandering_variance_plane_list.append(wandering_variance_plane)
         wandering_variance_spherical_list.append(wandering_variance_spherical)
         wandering_variance_gaussian_list.append(wandering_variance_gaussian)
