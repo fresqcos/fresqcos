@@ -365,6 +365,17 @@ class FreeSpaceChannel(Channel, ABC):
             )
         self._atmospheric_channel = value
 
+    @abstractmethod
+    def compute_rytov_variance(self) -> float:
+        """Compute the Rytov variance of the link.
+
+        Returns
+        -------
+        float
+            The Rytov variance.
+        """
+        pass
+
     def _wave_parameters_in(
         self, wave_type: WaveType, length: float
     ) -> tuple[float, float]:
@@ -390,22 +401,19 @@ class FreeSpaceChannel(Channel, ABC):
         else:
             raise ValueError(f"Invalid wave_type: {wave_type}")
 
-    def compute_vac_beam_waist_radius(self, wave_type: str) -> float:
-        """Compute the beam waist radius at the receiver plane for propagation in vacuum.
+    def compute_beam_waist_radius_out_vac(self) -> float:
+        """Compute the beam waist radius at the receiver (output) plane for propagation in vacuum.
+        From [Andrews/Phillips, 2005, Eq 4.37].
 
         Returns
         -------
         float
             The vacuum beam waist radius at the receiver plane in meters.
         """
-        if wave_type == WaveType.PLANE or wave_type == WaveType.SPHERICAL:
-            raise ValueError(
-                "Beam waist radius is only defined for a finite Gaussian beam. "
-                "Use WaveType.GAUSSIAN for a finite transmitter beam."
-            )
-        
+        wave_type = "gaussian"  # Beam waist radius is only defined for Gaussian beams
+
         length = self.channel_length_m
-        
+
         radius_of_curvature_in, waist_radius_in = self._wave_parameters_in(
             wave_type, length
         )
@@ -417,6 +425,36 @@ class FreeSpaceChannel(Channel, ABC):
         )
 
         waist_radius_out = waist_radius_in * np.sqrt(theta_in**2 + lambda_in**2)
+        return waist_radius_out
+
+    def compute_long_term_beam_waist_radius_out_turb(self) -> float:
+        """Compute the long-term beam waist radius at the receiver (output) plane for propagation in turbulence.
+        From [Andrews/Phillips, 2005, Eq 7.45].
+
+        Returns
+        -------
+        float
+            The turbulence-induced long-term beam waist radius at the receiver plane in meters.
+        """
+        wave_type = (
+            "gaussian"  # Long-term beam waist radius is only defined for Gaussian beams
+        )
+        length = self.channel_length_m
+
+        radius_of_curvature_in, waist_radius_in = self._wave_parameters_in(
+            wave_type, length
+        )
+        _, lambda_out = output_plane_parameters(
+            length,
+            self.transmitter_station.transmitter.wavelength,
+            waist_radius_in,
+            radius_of_curvature_in,
+        )
+        waist_radius_vac = self.compute_beam_waist_radius_out_vac()
+        waist_radius_out = waist_radius_vac * np.sqrt(
+            1 + 1.63 * self.compute_rytov_variance() ** (6 / 5) * lambda_out
+        )
+
         return waist_radius_out
 
     @abstractmethod
@@ -1036,8 +1074,12 @@ class SatToAerialChannel(DownlinkChannel):
             The collection efficiency PDF.
         """
         length = self.channel_length_m
-        pointing_error_var_x = (length * self.transmitter_station.transmitter.pointing_error_x) ** 2
-        pointing_error_var_y = (length * self.transmitter_station.transmitter.pointing_error_y) ** 2
+        pointing_error_var_x = (
+            length * self.transmitter_station.transmitter.pointing_error_x
+        ) ** 2
+        pointing_error_var_y = (
+            length * self.transmitter_station.transmitter.pointing_error_y
+        ) ** 2
         pointing_error_std_x = np.sqrt(pointing_error_var_x)
         pointing_error_std_y = np.sqrt(pointing_error_var_y)
         q = min(pointing_error_std_x, pointing_error_std_y) / max(
@@ -1048,7 +1090,10 @@ class SatToAerialChannel(DownlinkChannel):
         rx_radius = self.receiver_station.receiver.aperture / 2
         collection_efficiency_pdf = (
             compute_collection_efficiency_pdf_circular_weak_turbulence(
-                eta, radial_pdf, rx_radius, self.transmitter_station.transmitter.waist_radius
+                eta,
+                radial_pdf,
+                rx_radius,
+                self.transmitter_station.transmitter.waist_radius,
             )
         )
         return collection_efficiency_pdf
