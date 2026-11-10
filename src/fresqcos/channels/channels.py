@@ -20,7 +20,7 @@ from scipy.integrate import quad
 import numpy as np
 from numbers import Real
 
-eta = np.linspace(0, 1, 1000)
+eta = np.linspace(1e-7, 1, 1000)
 
 
 class LinkType(str, Enum):
@@ -365,9 +365,34 @@ class FreeSpaceChannel(Channel, ABC):
             )
         self._atmospheric_channel = value
 
+    @property
     @abstractmethod
-    def compute_rytov_variance(self) -> float:
+    def channel_length_m(self) -> float:
+        """Return the length of the free-space channel in meters."""
+        pass
+
+    @property
+    def pointing_error_var_x(self) -> float:
+        """Return the pointing error variance in the x-direction in square meters."""
+        pointing_error_x = self.transmitter_station.transmitter.pointing_error_x
+        var_x = (pointing_error_x * self.channel_length_m) ** 2
+        return var_x
+
+    @property
+    def pointing_error_var_y(self) -> float:
+        """Return the pointing error variance in the y-direction in square meters."""
+        pointing_error_y = self.transmitter_station.transmitter.pointing_error_y
+        var_y = (pointing_error_y * self.channel_length_m) ** 2
+        return var_y
+
+    @abstractmethod
+    def compute_rytov_variance(self, wave_type: WaveType) -> float:
         """Compute the Rytov variance of the link.
+
+        Parameters
+        ----------
+        wave_type : WaveType
+            Wavefront model: PLANE, SPHERICAL, or GAUSSIAN.
 
         Returns
         -------
@@ -375,6 +400,62 @@ class FreeSpaceChannel(Channel, ABC):
             The Rytov variance.
         """
         pass
+
+    @abstractmethod
+    def compute_coherence_width(self, wave_type: WaveType) -> float:
+        """Compute the coherence width of the propagated beam.
+
+        Parameters
+        ----------
+        wave_type : WaveType
+            Wavefront model: PLANE, SPHERICAL, or GAUSSIAN.
+
+        Returns
+        -------
+        float
+            The coherence width in meters.
+        """
+        pass
+
+    @abstractmethod
+    def compute_turb_wandering_variance(self) -> float:
+        """Compute the turbulence-induced beam wandering variance of a
+        Gaussian beam in a free-space channel.
+
+        Returns
+        -------
+        float
+            The beam wandering variance in square meters.
+        """
+        pass
+
+    def compute_total_wandering_var_x(self) -> float:
+        """Compute the total beam wandering variance in the x-direction,
+        including both turbulence-induced and pointing error contributions.
+
+        Returns
+        -------
+        float
+            The total beam wandering variance in square meters.
+        """
+        total_var_x = (
+            self.compute_turb_wandering_variance() / 2 + self.pointing_error_var_x
+        )
+        return total_var_x
+
+    def compute_total_wandering_var_y(self) -> float:
+        """Compute the total beam wandering variance in the y-direction,
+        including both turbulence-induced and pointing error contributions.
+
+        Returns
+        -------
+        float
+            The total beam wandering variance in square meters.
+        """
+        total_var_y = (
+            self.compute_turb_wandering_variance() / 2 + self.pointing_error_var_y
+        )
+        return total_var_y
 
     def _wave_parameters_in(
         self, wave_type: WaveType, length: float
@@ -410,7 +491,9 @@ class FreeSpaceChannel(Channel, ABC):
         float
             The vacuum beam waist radius at the receiver plane in meters.
         """
-        wave_type = "gaussian"  # Beam waist radius is only defined for Gaussian beams
+        wave_type = (
+            WaveType.GAUSSIAN
+        )  # Beam waist radius is only defined for Gaussian beams
 
         length = self.channel_length_m
 
@@ -428,8 +511,8 @@ class FreeSpaceChannel(Channel, ABC):
         return waist_radius_out
 
     def compute_long_term_beam_waist_radius_out_turb(self) -> float:
-        """Compute the long-term beam waist radius at the receiver (output) plane for propagation in turbulence.
-        From [Andrews/Phillips, 2005, Eq 7.45].
+        """Compute the long-term beam waist radius at the receiver (output) plane
+        for propagation in turbulence. From [Andrews/Phillips, 2005, Eq 7.45].
 
         Returns
         -------
@@ -437,7 +520,7 @@ class FreeSpaceChannel(Channel, ABC):
             The turbulence-induced long-term beam waist radius at the receiver plane in meters.
         """
         wave_type = (
-            "gaussian"  # Long-term beam waist radius is only defined for Gaussian beams
+            WaveType.GAUSSIAN  # Long-term beam waist radius is only defined for Gaussian beams
         )
         length = self.channel_length_m
 
@@ -452,10 +535,25 @@ class FreeSpaceChannel(Channel, ABC):
         )
         waist_radius_vac = self.compute_beam_waist_radius_out_vac()
         waist_radius_out = waist_radius_vac * np.sqrt(
-            1 + 1.63 * self.compute_rytov_variance() ** (6 / 5) * lambda_out
+            1 + 1.63 * self.compute_rytov_variance(wave_type) ** (6 / 5) * lambda_out
         )
 
         return waist_radius_out
+
+    def compute_short_term_beam_waist_radius_out(self) -> float:
+        """Compute the short-term beam waist radius at the receiver (output) plane
+        for propagation in turbulence. From [Andrews/Phillips, 2005, Eq 7.44].
+
+        Returns
+        -------
+        float
+            The short-term beam waist radius at the receiver plane in meters.
+        """
+        long_term_radius = self.compute_long_term_beam_waist_radius_out_turb()
+        wandering_variance_turb = self.compute_turb_wandering_variance()
+        short_term_radius = np.sqrt(long_term_radius**2 - wandering_variance_turb)
+
+        return short_term_radius
 
     @abstractmethod
     def compute_channel_losses(self) -> float:
@@ -716,8 +814,9 @@ class SlantChannel(FreeSpaceChannel, ABC):
 
         return coherence_width
 
-    def compute_wandering_variance(self) -> float:
-        """Compute the beam wandering variance of a Gaussian beam in a slant free-space channel.
+    def compute_turb_wandering_variance(self) -> float:
+        """Compute the turbulence-induced beam wandering variance
+        of a Gaussian beam in a slant free-space channel.
 
         Returns
         -------
@@ -725,7 +824,9 @@ class SlantChannel(FreeSpaceChannel, ABC):
             The beam wandering variance in square meters.
         """
         length = self.channel_length_m
-        wave_type = "gaussian"  # Wandering variance is only defined for Gaussian beams
+        wave_type = (
+            WaveType.GAUSSIAN
+        )  # Wandering variance is only defined for Gaussian beams
         radius_of_curvature_in, waist_radius_in = self._wave_parameters_in(
             wave_type, length
         )
@@ -912,18 +1013,20 @@ class HorizontalChannel(FreeSpaceChannel, ABC):
             coherence_width = np.inf
         else:
             coherence_width_plane = (0.423 * k**2 * self.cn2 * length) ** (-3 / 5)
-            alpha = (
-                (1 - theta_out ** (8 / 3)) / (1 - theta_out)
-                if theta_out >= 0
-                else (1 + np.abs(theta_out) ** (8 / 3)) / (1 - theta_out)
-            )
+            if theta_out == 1:
+                alpha = 8 / 3
+            elif theta_out >= 0:
+                alpha = (1 - theta_out ** (8 / 3)) / (1 - theta_out)
+            else:
+                alpha = (1 + abs(theta_out) ** (8 / 3)) / (1 - theta_out)
             coherence_width = (8 / (3 * (alpha + 0.618 * lambda_out ** (11 / 6)))) ** (
                 3 / 5
             ) * coherence_width_plane
         return coherence_width
 
-    def compute_wandering_variance(self) -> float:
-        """Compute the beam wandering variance for a Gaussian beam in a horizontal free-space channel.
+    def compute_turb_wandering_variance(self) -> float:
+        """Compute the turbulence-induced beam wandering variance
+        for a Gaussian beam in a horizontal free-space channel.
 
         Returns
         -------
@@ -931,7 +1034,9 @@ class HorizontalChannel(FreeSpaceChannel, ABC):
             The beam wandering variance in square meters.
         """
         length = self.channel_length_m
-        wave_type = "gaussian"  # Wandering variance is only defined for Gaussian beams
+        wave_type = (
+            WaveType.GAUSSIAN
+        )  # Wandering variance is only defined for Gaussian beams
 
         radius_of_curvature_in, waist_radius_in = self._wave_parameters_in(
             wave_type, length
@@ -1066,26 +1171,23 @@ class SatToAerialChannel(DownlinkChannel):
         )
 
     def compute_collection_efficiency_pdf(self) -> np.ndarray:
-        """Compute the collection efficiency PDF for a satellite to aerial platform channel.
+        """Compute the collection efficiency PDF for a satellite to
+        aerial platform channel.
 
         Returns
         -------
         float
             The collection efficiency PDF.
         """
-        length = self.channel_length_m
-        pointing_error_var_x = (
-            length * self.transmitter_station.transmitter.pointing_error_x
-        ) ** 2
-        pointing_error_var_y = (
-            length * self.transmitter_station.transmitter.pointing_error_y
-        ) ** 2
-        pointing_error_std_x = np.sqrt(pointing_error_var_x)
-        pointing_error_std_y = np.sqrt(pointing_error_var_y)
-        q = min(pointing_error_std_x, pointing_error_std_y) / max(
-            pointing_error_std_x, pointing_error_std_y
+        total_wandering_var_x = self.compute_total_wandering_var_x()
+        total_wandering_var_y = self.compute_total_wandering_var_y()
+
+        total_wandering_std_x = np.sqrt(total_wandering_var_x)
+        total_wandering_std_y = np.sqrt(total_wandering_var_y)
+        q = min(total_wandering_std_x, total_wandering_std_y) / max(
+            total_wandering_std_x, total_wandering_std_y
         )
-        omega = self.pointing_error_var_x + self.pointing_error_var_y
+        omega = total_wandering_var_x + total_wandering_var_y
         radial_pdf = lambda r: hoyt_pdf(r, q, omega)
         rx_radius = self.receiver_station.receiver.aperture / 2
         collection_efficiency_pdf = (
@@ -1093,10 +1195,14 @@ class SatToAerialChannel(DownlinkChannel):
                 eta,
                 radial_pdf,
                 rx_radius,
-                self.transmitter_station.transmitter.waist_radius,
+                self.compute_short_term_beam_waist_radius_out(),
             )
         )
         return collection_efficiency_pdf
+
+    def draw_channel_pdf_sample(self) -> float:
+        """Draw a random sample from the channel loss distribution."""
+        pass
 
     def compute_channel_losses(self) -> float:
         pass

@@ -29,7 +29,7 @@ def compute_circular_aperture_parameters(
     """
     x = (rx_radius / waist_radius) ** 2
     maximal_transmittance = np.sqrt(1 - np.exp(-2 * x))
-    scale = (
+    shape = (
         8
         * x
         * np.exp(-4 * x)
@@ -37,9 +37,9 @@ def compute_circular_aperture_parameters(
         / (1 - np.exp(-4 * x) * i0(4 * x))
         / np.log(2 * maximal_transmittance**2 / (1 - np.exp(-4 * x) * i0(4 * x)))
     )
-    shape = rx_radius * np.log(
+    scale = rx_radius * np.log(
         2 * maximal_transmittance**2 / (1 - np.exp(-4 * x) * i0(4 * x))
-    ) ** (-1.0 / scale)
+    ) ** (-1.0 / shape)
 
     return maximal_transmittance, scale, shape
 
@@ -70,8 +70,11 @@ def compute_collection_efficiency_pdf_circular_weak_turbulence(
     maximal_transmittance, scale, shape = compute_circular_aperture_parameters(
         rx_radius, waist_radius
     )
-    x = 2 * np.log(maximal_transmittance / eta)
+    x = np.log(maximal_transmittance**2 / eta)
     pdf = (
-        2 * scale / (shape * eta) * x ** (1 / scale - 1) * radial_pdf(x ** (1 / scale))
+        scale
+        / (shape * eta)
+        * x ** (1 / shape - 1)
+        * radial_pdf(scale * x ** (1 / shape))
     )
     return pdf

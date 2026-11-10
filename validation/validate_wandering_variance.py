@@ -165,7 +165,7 @@ if __name__ == "__main__":
     for i in range(len(length_vector)):
 
         wandering_variance_general_horizontal = (
-            horizontal_channel.compute_wandering_variance()
+            horizontal_channel.compute_turb_wandering_variance()
         )
         wandering_variance_horizontal = compute_wandering_variance_horizontal(
             horizontal_channel
@@ -184,13 +184,13 @@ if __name__ == "__main__":
 
     for i in range(len(altitude_vector)):
 
-        wandering_variance_general_uplink = uplink_channel.compute_wandering_variance()
+        wandering_variance_general_uplink = uplink_channel.compute_turb_wandering_variance()
         wandering_variance_uplink = compute_wandering_variance_uplink(uplink_channel)
         wandering_variance_general_uplink_list.append(wandering_variance_general_uplink)
         wandering_variance_uplink_list.append(wandering_variance_uplink)
 
         wandering_variance_general_downlink = (
-            downlink_channel.compute_wandering_variance()
+            downlink_channel.compute_turb_wandering_variance()
         )
         wandering_variance_general_downlink_list.append(
             wandering_variance_general_downlink

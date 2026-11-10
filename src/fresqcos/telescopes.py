@@ -135,6 +135,7 @@ class Transmitter(Telescope):
     def pointing_error_x(self, value: float) -> None:
         if value < 0:
             raise ValueError(f"pointing_error_x must be non-negative, got {value}")
+        self._pointing_error_x = value
 
     @property
     def pointing_error_y(self) -> float:
