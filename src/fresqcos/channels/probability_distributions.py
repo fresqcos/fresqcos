@@ -1,7 +1,8 @@
 """Module for useful probability distributions."""
 
 import numpy as np
-from scipy.special import erf
+from scipy.special import erf, i0e
+from scipy.stats import halfnorm
 
 
 def lognormal_pdf(eta, mu, sigma):
@@ -144,11 +145,23 @@ def hoyt_pdf(r: np.ndarray, q: float, omega: float) -> np.ndarray:
     pdf : np.ndarray
         PDF of Hoyt distribution for values of r.
     """
+    if omega <= 0 or not np.isfinite(omega):
+        raise ValueError("omega must be finite and positive.")
+
+    if not np.isfinite(q) or not 0 <= q <= 1:
+        raise ValueError("q must be between 0 and 1.")
+
+    if q == 0:
+        return halfnorm.pdf(r, scale=np.sqrt(omega))
+
+    arg = ((1 - q**4) * r**2) / (4 * q**2 * omega)
+
     pdf = (
         r
         * (1 + q**2)
         / (q * omega)
-        * np.exp(-((1 + q**2) ** 2 * r**2) / (4 * q**2 * omega))
-        * np.i0(((1 - q**4) * r**2) / (4 * q**2 * omega))
+        * np.exp(-(1 + q**2) * r**2 / (2 * omega))
+        * i0e(arg)
     )
+
     return pdf

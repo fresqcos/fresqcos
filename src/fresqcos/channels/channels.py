@@ -20,8 +20,6 @@ from scipy.integrate import quad
 import numpy as np
 from numbers import Real
 
-eta = np.linspace(1e-7, 1, 1000)
-
 
 class LinkType(str, Enum):
     """Geometry of the free-space optical link."""
@@ -1170,26 +1168,30 @@ class SatToAerialChannel(DownlinkChannel):
             transmitter_station, receiver_station, atmospheric_channel, zenith_angle_deg
         )
 
-    def compute_collection_efficiency_pdf(self) -> np.ndarray:
+    def compute_collection_efficiency_pdf(self, eta: np.ndarray) -> np.ndarray:
         """Compute the collection efficiency PDF for a satellite to
         aerial platform channel.
+
+        Parameters
+        ----------
+        eta : np.ndarray
+            The collection efficiency values at which to evaluate the PDF.
 
         Returns
         -------
         float
             The collection efficiency PDF.
         """
-        total_wandering_var_x = self.compute_total_wandering_var_x()
-        total_wandering_var_y = self.compute_total_wandering_var_y()
-
-        total_wandering_std_x = np.sqrt(total_wandering_var_x)
-        total_wandering_std_y = np.sqrt(total_wandering_var_y)
-        q = min(total_wandering_std_x, total_wandering_std_y) / max(
-            total_wandering_std_x, total_wandering_std_y
-        )
-        omega = total_wandering_var_x + total_wandering_var_y
-        radial_pdf = lambda r: hoyt_pdf(r, q, omega)
         rx_radius = self.receiver_station.receiver.aperture / 2
+        var_x = self.compute_total_wandering_var_x()
+        var_y = self.compute_total_wandering_var_y()
+        std_x = np.sqrt(var_x)
+        std_y = np.sqrt(var_y)
+
+        q = min(std_x, std_y) / max(std_x, std_y)
+        omega = var_x + var_y
+        radial_pdf = lambda r: hoyt_pdf(r, q, omega)
+
         collection_efficiency_pdf = (
             compute_collection_efficiency_pdf_circular_weak_turbulence(
                 eta,

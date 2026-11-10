@@ -1,7 +1,7 @@
 """Module for calculating the collection efficiency of a free-space optical communication system."""
 
 import numpy as np
-from scipy.special import i0, i1
+from scipy.special import i0e, i1e
 
 
 def compute_circular_aperture_parameters(
@@ -22,26 +22,25 @@ def compute_circular_aperture_parameters(
     -------
     maximal_transmittance : float
         The maximal transmittance of the circular aperture.
-    scale : float
-        The scale parameter.
     shape : float
         The shape parameter.
+    scale : float
+        The scale parameter.
     """
     x = (rx_radius / waist_radius) ** 2
-    maximal_transmittance = np.sqrt(1 - np.exp(-2 * x))
+    maximal_transmittance = 1 - np.exp(-2 * x)
     shape = (
         8
         * x
-        * np.exp(-4 * x)
-        * i1(4 * x)
-        / (1 - np.exp(-4 * x) * i0(4 * x))
-        / np.log(2 * maximal_transmittance**2 / (1 - np.exp(-4 * x) * i0(4 * x)))
+        * i1e(4 * x)
+        / (1 - i0e(4 * x))
+        / np.log(2 * maximal_transmittance / (1 - i0e(4 * x)))
     )
-    scale = rx_radius * np.log(
-        2 * maximal_transmittance**2 / (1 - np.exp(-4 * x) * i0(4 * x))
-    ) ** (-1.0 / shape)
+    scale = rx_radius * np.log(2 * maximal_transmittance / (1 - i0e(4 * x))) ** (
+        -1 / shape
+    )
 
-    return maximal_transmittance, scale, shape
+    return maximal_transmittance, shape, scale
 
 
 def compute_collection_efficiency_pdf_circular_weak_turbulence(
@@ -49,7 +48,8 @@ def compute_collection_efficiency_pdf_circular_weak_turbulence(
 ) -> np.ndarray:
     """
     Compute the collection efficiency probability density function (PDF) for a
-    circular, unobstructed aperture under weak turbulence conditions.
+    circular, unobstructed aperture under weak turbulence conditions, when pointing
+    error is prevalent.
 
     Parameters
     ----------
@@ -67,13 +67,16 @@ def compute_collection_efficiency_pdf_circular_weak_turbulence(
     pdf : np.ndarray
         PDF of collection efficiency for values of eta.
     """
-    maximal_transmittance, scale, shape = compute_circular_aperture_parameters(
+    eta_max, shape, scale = compute_circular_aperture_parameters(
         rx_radius, waist_radius
     )
-    x = np.log(maximal_transmittance**2 / eta)
-    pdf = (
+    pdf = np.zeros_like(eta)
+    mask = (eta > 0) & (eta < eta_max)
+    eta_valid = eta[mask]
+    x = np.log(eta_max / eta_valid)
+    pdf[mask] = (
         scale
-        / (shape * eta)
+        / (shape * eta_valid)
         * x ** (1 / shape - 1)
         * radial_pdf(scale * x ** (1 / shape))
     )

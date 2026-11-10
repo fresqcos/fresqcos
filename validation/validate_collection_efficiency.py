@@ -7,8 +7,8 @@ from fresqcos.channels.cn2 import hufnagel_valley
 from fresqcos.channels.channels import (
     SatToAerialChannel,
 )
-from functools import partial
 import numpy as np
+from functools import partial
 import matplotlib.pyplot as plt
 import matplotlib
 
@@ -25,19 +25,18 @@ if __name__ == "__main__":
     rx_aperture = 0.4
     rx_obscuration_ratio = 0.3
     rx_internal_loss = 0.1
-    platform_altitude = 400
-    zenith_angle_deg = 65
+    zenith_angle_deg = 70
     wind_rms = 21
     reference_cn2 = 1.7e-14
-    altitude_aerial = 20
-    altitude_satellite = 400
+    altitude_aerial = 0
+    altitude_satellite = 20
 
     tx_telescope = Transmitter(
         wavelength=wvln,
         waist_radius=tx_waist_radius,
         obscuration_ratio=tx_obscuration_ratio,
         internal_loss=tx_internal_loss,
-        pointing_error_x=1e-6,
+        pointing_error_x=2e-6,
         pointing_error_y=2e-6,
     )
 
@@ -75,14 +74,14 @@ if __name__ == "__main__":
         zenith_angle_deg=zenith_angle_deg,
     )
 
-    efficiency_pdf = downlink_channel.compute_collection_efficiency_pdf()
+    eta = np.linspace(1e-7, 1, 1000)
+    efficiency_pdf = downlink_channel.compute_collection_efficiency_pdf(eta)
 
 
 plt.figure()
-plt.plot(efficiency_pdf)
+plt.plot(eta, efficiency_pdf)
 plt.xlabel("Collection Efficiency")
 plt.ylabel("Probability Density")
-plt.legend()
 plt.grid()
 plt.tight_layout()
 
