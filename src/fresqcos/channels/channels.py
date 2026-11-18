@@ -14,6 +14,7 @@ from fresqcos.channels.geometry import (
 from fresqcos.channels.atmosphere import Atmosphere
 from fresqcos.channels.probability_distributions import hoyt_pdf
 from fresqcos.channels.collection_efficiency import (
+    compute_collection_efficiency_pdf_annular_weak_turbulence,
     compute_collection_efficiency_pdf_circular_weak_turbulence,
 )
 from scipy.integrate import quad
@@ -1197,6 +1198,42 @@ class SatToAerialChannel(DownlinkChannel):
                 eta,
                 radial_pdf,
                 rx_radius,
+                self.compute_short_term_beam_waist_radius_out(),
+            )
+        )
+        return collection_efficiency_pdf
+
+    def compute_collection_efficiency_pdf_annular(self, eta: np.ndarray) -> np.ndarray:
+        """Compute the collection efficiency PDF for a satellite to
+        aerial platform channel with an annular receiver aperture.
+
+        Parameters
+        ----------
+        eta : np.ndarray
+            The collection efficiency values at which to evaluate the PDF.
+
+        Returns
+        -------
+        float
+            The collection efficiency PDF.
+        """
+        rx_radius = self.receiver_station.receiver.aperture / 2
+        inner_radius = self.receiver_station.receiver.obscuration_ratio * rx_radius
+        var_x = self.compute_total_wandering_var_x()
+        var_y = self.compute_total_wandering_var_y()
+        std_x = np.sqrt(var_x)
+        std_y = np.sqrt(var_y)
+
+        q = min(std_x, std_y) / max(std_x, std_y)
+        omega = var_x + var_y
+        radial_pdf = lambda r: hoyt_pdf(r, q, omega)
+
+        collection_efficiency_pdf = (
+            compute_collection_efficiency_pdf_annular_weak_turbulence(
+                eta,
+                radial_pdf,
+                rx_radius,
+                inner_radius,
                 self.compute_short_term_beam_waist_radius_out(),
             )
         )

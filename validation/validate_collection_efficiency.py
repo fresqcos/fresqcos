@@ -23,7 +23,7 @@ if __name__ == "__main__":
     tx_obscuration_ratio = 0
     tx_internal_loss = 0.1
     rx_aperture = 0.4
-    rx_obscuration_ratio = 0.3
+    rx_obscuration_ratio = 0
     rx_internal_loss = 0.1
     zenith_angle_deg = 70
     wind_rms = 21
@@ -76,13 +76,16 @@ if __name__ == "__main__":
 
     eta = np.linspace(1e-7, 1, 1000)
     efficiency_pdf = downlink_channel.compute_collection_efficiency_pdf(eta)
+    efficiency_pdf_annular = downlink_channel.compute_collection_efficiency_pdf_annular(eta)
 
 
 plt.figure()
-plt.plot(eta, efficiency_pdf)
+plt.plot(eta, efficiency_pdf, label="Circular Aperture")
+plt.plot(eta, efficiency_pdf_annular, label="Annular Aperture", linestyle="--")
 plt.xlabel("Collection Efficiency")
 plt.ylabel("Probability Density")
 plt.grid()
+plt.legend()
 plt.tight_layout()
 
 plt.show()
