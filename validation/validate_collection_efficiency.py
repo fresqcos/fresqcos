@@ -23,9 +23,9 @@ if __name__ == "__main__":
     tx_obscuration_ratio = 0
     tx_internal_loss = 0.1
     rx_aperture = 0.4
-    rx_obscuration_ratio = 0
+    rx_obscuration_ratio = 0.4
     rx_internal_loss = 0.1
-    zenith_angle_deg = 70
+    zenith_angle_deg = 0
     wind_rms = 21
     reference_cn2 = 1.7e-14
     altitude_aerial = 0
@@ -36,8 +36,8 @@ if __name__ == "__main__":
         waist_radius=tx_waist_radius,
         obscuration_ratio=tx_obscuration_ratio,
         internal_loss=tx_internal_loss,
-        pointing_error_x=2e-6,
-        pointing_error_y=2e-6,
+        pointing_error_x=0e-6,
+        pointing_error_y=0e-6,
     )
 
     rx_telescope = Receiver(
