@@ -12,6 +12,7 @@ from functools import partial
 import matplotlib.pyplot as plt
 import matplotlib
 
+
 matplotlib.rcParams["mathtext.fontset"] = "cm"
 matplotlib.rcParams["font.family"] = "STIXGeneral"
 matplotlib.rcParams["font.size"] = 14
@@ -77,7 +78,6 @@ if __name__ == "__main__":
     eta = np.linspace(1e-7, 1, 1000)
     efficiency_pdf = downlink_channel.compute_collection_efficiency_pdf(eta)
     efficiency_pdf_annular = downlink_channel.compute_collection_efficiency_pdf_annular(eta)
-
 
 plt.figure()
 plt.plot(eta, efficiency_pdf, label="Circular Aperture")

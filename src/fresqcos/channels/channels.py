@@ -15,7 +15,6 @@ from fresqcos.channels.atmosphere import Atmosphere
 from fresqcos.channels.probability_distributions import hoyt_pdf
 from fresqcos.channels.collection_efficiency import (
     compute_collection_efficiency_pdf_annular_weak_turbulence,
-    compute_collection_efficiency_pdf_annular_weak_turbulence_roots,
     compute_collection_efficiency_pdf_circular_weak_turbulence,
 )
 from scipy.integrate import quad
@@ -1230,7 +1229,7 @@ class SatToAerialChannel(DownlinkChannel):
         radial_pdf = lambda r: hoyt_pdf(r, q, omega)
 
         collection_efficiency_pdf = (
-            compute_collection_efficiency_pdf_annular_weak_turbulence_roots(
+            compute_collection_efficiency_pdf_annular_weak_turbulence(
                 eta,
                 radial_pdf,
                 rx_radius,
